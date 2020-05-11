@@ -1,7 +1,25 @@
 import numpy as np
 
+import warnings
+
 '''
 TODO 
+
+**also** chekc the TODOs in the script
+0. break this into smaller subscripts
+    * trajectory creation
+    * masking
+    * noise 
+
+0. rename 'journey' with 'trajectory'
+    * journey implies travel
+    
+0. since slopes are determined by stays, maybe remove this field
+    * specify the slope of the travel
+        * the location of the travel (and stays) will be sorted to minimize the slope, cutting the adjacent stays as needed
+
+0. add Assert so that always [stay, trav, ..., trav, stay]     
+
 1. add some documentation
 2. keep the segment indices
     * use later for seg. dept. noise, also training
@@ -13,6 +31,17 @@ TODO
     * x, y, noisy y
     * segment idices, features
     * various returns: np.arrays, pd.DataFrames
+    
+6. segments' endpoints to coincide with the sparse stays
+    * some stays are shorter after masking
+7. improve the duplication for the data
+    * include some specific $x$-locations which are duplicated in certain segments
+        * this is like a tower which is pinged multiple times but only gives it's location
+    * include some specific $\Delta x$'s which are duplicated showing an effecitve radius when triangulation fails
+    * segement-/location-specific noise
+        * try also with the array of weights passed in `np.random.choice`
+            * changes the probab. of picking up specific events in the full array
+    
 '''
 
 """
@@ -45,14 +74,37 @@ stays = [
 """
 
 # Stay and travels included as lists
-get_stay = lambda start,stop,loc,slope=0: {"type": "stay", "loc":  loc, "start": start, "end":  stop, "slope":  slope}
+#### TODO: all but get_stay should be lambdas
+def get_stay(start,stop,loc,slope=0):     
+    """ 
+    Assigns values to attribute as key/value-pairs in a dict.
+
+    :param start: [float] time as beginning of stay
+    :param stop:  [float] time at end of stay
+    :param loc:   [float] location of stay
+    :param slope: [float] unused in a stay; retained here for generality
+    
+    :return: [dict] A dict of attribute-value pairs for the stays
+    """
+    
+    return {"type": "stay", "loc":  loc, "start": start, "end":  stop, "slope":  slope}
 
 get_trav = lambda start,stop,loc,slope:   {"type": "trav", "loc":  loc, "start": start, "end":  stop, "slope":  slope}
 
 get_seg  = lambda start,stop,loc,slope=0: get_stay(start,stop,loc,slope) if slope == 0 else get_trav(start,stop,loc,slope)
+get_seg_info = lambda seg: (seg['type'], seg['loc'], seg['start'], seg['end'], seg['slope'])
 
-get_stay_info =  lambda stay: (stay['loc'], stay['start'], stay['end'], stay['slope'])
+def check_stay(stay):
+    if stay['type'] == 'stay':
+        return True
+    else:
+        raise ValueError("\'type\' is not \'stay\'")
 
+get_stay_info = lambda stay: get_seg_info(stay)[1:] if check_stay(stay) else None
+#get_stay_info = lambda stay: (stay['loc'], stay['start'], stay['end'], stay['slope'])
+
+
+rand_range = lambda low, high, size: (high-low)*np.random.rand(size) + low
 
 #### TODO: move to another module
 def list_interleave(a, b):
@@ -81,8 +133,8 @@ def get_travels(x, stay_list, threshold=0.5):
     for stay1, stay2 in list(zip(stay_list[:-1],stay_list[1:])):
 
         # Get the quantities
-        loc1, start1, stop1, _ = get_stay_info(stay1) 
-        loc2, start2, stop2, _ = get_stay_info(stay2) 
+        _, loc1, start1, stop1, _ = get_seg_info(stay1) 
+        _, loc2, start2, stop2, _ = get_seg_info(stay2) 
         
         # Adjust the stoppoints as needed
         start1 = max(start1,x[0])
@@ -129,7 +181,7 @@ def get_journey_path(x, seg_list):
         # keep all here since mask indices are scope-depstopent
         
         # Get the segment details
-        loc, start, stop, slope = get_stay_info(seg)   
+        _, loc, start, stop, slope = get_seg_info(seg)   
             
         # Find the associated indices
         if start < stop:    
@@ -170,7 +222,7 @@ def get_journey_path(x, seg_list):
 
 def get_segments(x, stays, threshold=0.5):
     
-    segments = linterleave(stays, get_travels(x, stays, threshold))
+    segments = list_interleave(stays, get_travels(x, stays, threshold))
     
     return segments
 
@@ -185,7 +237,7 @@ def get_stay_paths(x, seg_list):
     for seg in seg_list:
 
         
-        loc, start, stop, _ = get_stay_info(seg)  
+        _, loc, start, stop, _ = get_seg_info(seg)  
         
         if start < stop:
             start_ind = np.where((x>=start))[0][0]
@@ -200,6 +252,19 @@ def get_stay_paths(x, seg_list):
     return fff
 
 
+def get_stay_segs(stay_list):
+    
+    stay_segs_t, stay_segs_x = [], []
+    
+    for stay in stay_list:
+        
+        _, loc, start, stop, _ = get_seg_info(stay) 
+        
+        stay_segs_x += [loc, loc, None]
+        stay_segs_t += [start, stop,None]
+
+    return np.array(stay_segs_t), np.array(stay_segs_x) 
+
 def get_travel_paths(x, y, seg_list, threshold=0.5):
     #### NOTE: this may be irrelevant
     fff = y.copy()
@@ -207,7 +272,7 @@ def get_travel_paths(x, y, seg_list, threshold=0.5):
     for seg in seg_list:
 
         
-        loc, start, stop, slope = get_stay_info(seg)   
+        _, loc, start, stop, slope = get_seg_info(seg)   
         
         print(seg)
         
@@ -225,107 +290,33 @@ def get_travel_paths(x, y, seg_list, threshold=0.5):
     return fff
 
 
-def get_noisy_bumps(x, **kwargs):
-    
-    remask = lambda x: int(not bool(x))
-    
-    #print(len(kwargs)%5)
-    assert len(kwargs)%5 == 0, "Number of kwargs is wrong!"
-    
-    kwargs_len = int(len(kwargs)/5)
+def get_adjusted_stays(segs, time_suba):
+    """
+    Adjust the stay boundaries after the masking, as there is a reduction in the number of events
 
-    fff = np.zeros(x.size)
+    :param segs: [list(dict)] segment dictionary
+    :param time_suba:  [np.array] reduced time-array (after masking)
     
-    for nn in range(kwargs_len):
-        n=nn+1
-        #print(n)
-        amp   = kwargs[f'bump{n}_amp']
-        slope = kwargs[f'bump{n}_slope']
-        start = kwargs[f'bump{n}_start']
-        end   = kwargs[f'bump{n}_end']    
-        eta   = kwargs[f'bump{n}_eta']  
+    :return: [list(dict)] List of new stays
+    """
     
-        # The tanh-bump
-        ggg = amp*np.tanh( 1*slope*(x-start)) \
-            + amp*np.tanh(-1*slope*(x-end))   
+    new_stays = []
+    
+    for seg in segs:
+
+        type_, loc_, start_, stop_ ,_ = get_seg_info(seg) 
+
+        ####TODO: generalize to any seg, since the travels are also affected.
+        if  type_ == 'stay':
+            subarr = time_suba[np.where((time_suba >= start_) & \
+                                        (time_suba <= stop_))]
+            
+            new_t0, new_t1 = np.min(subarr),np.max(subarr)        
+            
+            new_stays.append(get_stay(new_t0,new_t1,loc_))
         
-        # Create the mask to target only the bumps
-        mask = ggg>0.001
-        mask = np.array(list(map(remask, mask)))        
-        
-        noise = np.random.normal(loc=0.0, scale=eta, size=ggg.size)        
-        if nn != 0:
-            noise = noise*mask
-        
-        # Add the noisy bumps
-        fff += ggg + noise
-        
-    return fff
+    return new_stays
 
-
-def get_noise_event(y):
-    
-    act0=0.050
-    act1=0.025
-    act2=0.085
-    trp0=0.035
-    trp1=0.030
-    trp2=0.080
-
-    if abs(y) < 0.1:
-        eta = np.random.normal(loc=0.0, scale=act0, size=1)
-        
-    elif (y >= 0.91) & (y < 1.01):
-        eta = np.random.normal(loc=0.0, scale=act1, size=1)   
-    
-    elif (y >= -2.01) & (y < -1.81):
-        eta = np.random.normal(loc=0.0, scale=act2, size=1)
-        
-    else:
-        eta = np.random.normal(loc=0.0, scale=trp2, size=1)
-    
-    return y + eta
-
-
-def get_noise(yyy):
-    yyy = yyy.copy()
-    for n,yy in enumerate(yyy):
-        #print(n)
-        yyy[n] = get_noise_event(yy)
-
-    return yyy    
-
-
-# Masking to sparsify the signal
-#### TODO: make the sparsing location/segment dependent
-
-def get_frac_mask(size, frac, verbose):
-    
-    int_frac = int(frac*size) 
-    
-    # Get the fraction of "on"s
-    out_arr_1s = np.ones(int_frac)
-
-    # Get the remaining fraction of "off"s
-    out_arr_0s = np.zeros(size-int_frac)
-
-    # Concat and shuffle
-    out_arr = np.concatenate([out_arr_0s,out_arr_1s])
-    np.random.shuffle(out_arr)    
-    
-    if verbose: print(np.sum(out_arr)/size)
-    
-    return out_arr
-
-def get_mask_indices(mask):
-    
-    mask_indices = (mask == 1)
-    
-    return mask_indices
-
-def get_mask(size, frac, verbose=False):
-    
-    return get_mask_indices(get_frac_mask(size, frac, verbose))
 
 #---
 #### NOTE: Non functoinal

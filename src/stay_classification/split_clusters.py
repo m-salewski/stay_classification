@@ -8,6 +8,8 @@ min_samples = 5
 
 def get_split_clusters(labels, time_thresh, x_in, y_in):
 
+    labels = labels.copy()
+    
     # Black removed and is used for noise instead.
     unique_labels = set(labels)
 
@@ -25,7 +27,7 @@ def get_split_clusters(labels, time_thresh, x_in, y_in):
 
             labels = get_split_cluster(labels, new_label, k, cluster_member_mask, time_thresh, x, y_in)
         else:
-            print('\tdo nothing for k =',k)
+            print('\tbut do nothing for k =',k)
         
     print('New labels:',set(labels))
     return labels
