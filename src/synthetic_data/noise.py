@@ -2,6 +2,33 @@ import numpy as np
 
 import warnings
 
+from synthetic_data.trajectory import get_stay_paths, get_seg_mask
+
+'''
+    
+def get_stay_paths(x, seg_list):   
+    
+
+    fff = np.zeros(x.size)
+    
+    for seg in seg_list:
+
+        
+        _, loc, start, stop, _ = get_seg_info(seg)  
+        
+        if start < stop:
+            start_ind = np.where((x>=start))[0][0]
+            stop_ind = np.where((x<stop))[0][0]
+        
+            mask = np.where((x>=start) & (x<stop))
+        else:
+            mask = np.where((x==start))
+        
+        fff[mask] = loc        
+        
+    return fff
+'''
+
 """
 TODO 
 
@@ -43,26 +70,45 @@ TODO
             * changes the probab. of picking up specific events in the full array
     
 """
+def get_seg_noise(seg,noise):
+    seg['noise'] = noise
+    return seg
+
+get_noisy_seg_info = lambda seg: (seg['noise'], seg['loc'], seg['start'], seg['end'])
+
+get_noisy_segs = lambda segments, noises: [get_seg_noise(seg,noises[n]) for n, seg in enumerate(segments)]
+
+get_noise_arr = lambda mn, mx, size: (mx - mn)*np.random.random_sample(size) + mn
+
+get_add_noise = lambda eta: lambda y1: y1 + np.random.normal(loc=0.0, scale=eta, size=1)
+
+def get_noisy_path(x, y, seg_list):
+        
+    y = y.copy()
+    
+    for seg in seg_list:
+
+        #### NOTE
+        # keep all here since mask indices are scope-depstopent
+        
+        # Get the segment details
+        noise, loc, start, stop = get_noisy_seg_info(seg)   
+            
+        # Find the associated indices
+        mask = get_seg_mask(x,start,stop)
+        
+        y[mask] = map_array(get_add_noise(noise))(y[mask])
+                
+    return y
+
+
 
 def get_noisy_bumps(x, **kwargs):
-    """Obsolete"""
-    remask = lambda x: int(not bool(x))
-    
-    #print(len(kwargs)%5)
-    assert len(kwargs)%5 == 0, "Number of kwargs is wrong!"
-    
-    kwargs_len = int(len(kwargs)/5)
 
-    fff = np.zeros(x.size)
     
     for nn in range(kwargs_len):
         n=nn+1
-        #print(n)
-        amp   = kwargs[f'bump{n}_amp']
-        slope = kwargs[f'bump{n}_slope']
-        start = kwargs[f'bump{n}_start']
-        end   = kwargs[f'bump{n}_end']    
-        eta   = kwargs[f'bump{n}_eta']  
+
     
         # The tanh-bump
         ggg = amp*np.tanh( 1*slope*(x-start)) \
@@ -106,7 +152,10 @@ def get_noise_event(y):
     return y + eta
 
 
-def get_noise(yyy):
+# np.array function
+map_array = lambda f: lambda x: np.fromiter((f(xi) for xi in x), x.dtype, count=len(x))
+
+def get_noise_(yyy):
     yyy = yyy.copy()
     for n,yy in enumerate(yyy):
         #print(n)
@@ -114,3 +163,24 @@ def get_noise(yyy):
 
     return yyy    
 
+
+def get_noise(yyy):
+    
+    yyy = yyy.copy()
+    
+    yyy = map_array(get_noise_event)(yyy)
+
+    return yyy   
+
+
+def get_radial_noise(x, loc, rad, sig):
+
+    x = x.copy()
+    
+    rand_range = lambda h, sig, l : ((sig+h)-h)*np.random.random() + l
+
+    rand_radius = lambda loc, rad, sig: ((-1)**np.random.randint(0,2,1)[0] )*rand_range(rad, sig, loc)
+
+    x = map_array(lambda y: rand_radius(y, 0.5, 0.01), x)
+    
+    return x

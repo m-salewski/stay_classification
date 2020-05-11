@@ -94,6 +94,8 @@ get_trav = lambda start,stop,loc,slope:   {"type": "trav", "loc":  loc, "start":
 get_seg  = lambda start,stop,loc,slope=0: get_stay(start,stop,loc,slope) if slope == 0 else get_trav(start,stop,loc,slope)
 get_seg_info = lambda seg: (seg['type'], seg['loc'], seg['start'], seg['end'], seg['slope'])
 
+
+
 def check_stay(stay):
     if stay['type'] == 'stay':
         return True
@@ -169,6 +171,41 @@ def get_travels(x, stay_list, threshold=0.5):
     return travels #fff
 
 
+def get_seg_mask(x, start, stop):
+    
+    x_buff = np.mean(np.abs(x[:-1]-x[1:]))/2.0
+    
+    # Find the associated indices
+    if start < stop:    
+        start_ind = np.where((x>=start))[0][0]
+        stop_ind = np.where((x<stop))[0][0]
+        mask = np.where((x>=start) & (x<stop))        
+
+    elif start == stop: 
+        # For single point stays (in beginning/stop)
+
+        # In case these are beyond the upper limit
+        if start <= x[0]:
+
+            start = max(start,x[0])
+            stop = max(stop,x[0])
+
+        elif start >= x[-1]:
+            start = min(start,x[-1])
+            stop = min(stop,x[-1])
+        else:
+            pass
+
+        # Include a buffer for single points
+        mask = np.where((x>=start-x_buff) & (x<stop+x_buff))
+
+    else:
+        # otherwise, the start and stop overlap
+        raise AssertionError('start is greater than stop point')
+      
+    return mask
+  
+
 def get_journey_path(x, seg_list):
     
     fff = np.zeros(x.size)
@@ -178,7 +215,7 @@ def get_journey_path(x, seg_list):
     for seg in seg_list:
 
         #### NOTE
-        # keep all here since mask indices are scope-depstopent
+        # keep all here since mask indices are scope-dependent
         
         # Get the segment details
         _, loc, start, stop, slope = get_seg_info(seg)   
