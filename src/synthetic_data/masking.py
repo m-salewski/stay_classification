@@ -105,6 +105,9 @@ def get_mask(size, frac, verbose=False):
     return get_mask_indices(get_frac_mask(size, frac, verbose))
 
 
+# NOTE: this mask _adds_ to the start and stop of a trajectory,
+#       so that it begins around 00:00 and ends around 23:59, always
+# TODO: fix this so that trajectories can begin/end at any time
 def get_mask_with_duplicates(time_arr, target_frac=1.0, target_dupl_frac=0.0, verbose=False):
     
     """ Return a (sub)array with/out duplicates
@@ -197,3 +200,38 @@ def get_mask_with_duplicates(time_arr, target_frac=1.0, target_dupl_frac=0.0, ve
     mask_ = mask_.astype(int)
     
     return mask_
+
+# NOTE: this is a patch!
+# TODO: include this into `get_mask_with_duplicates`
+def get_adjusted_dup_mask(time, stays, dup_mask):
+    
+    """ Return a masking array consistent with the stays
+    
+    Adjust the `get_mask_with_duplicates` output so that 
+    it obeys the timepoints of the stays. 
+    
+    Args:    
+        time_arr (np.array): time points in hours
+        stays        (dict): the stays; gets the first and last time points
+        dup_mask (np.array): the masking array
+    
+    Returns: 
+        np.array: updated mask to be applied to the time_arr, etc.
+
+    Raises:
+        None:
+
+    Examples:
+        >>> t_arr.size
+        1000
+        >>> mask = get_mask_with_duplicates(t_arr, 0.9, 0.1)
+        >>> mask
+        array([   32,   32,    89, ..., 960, 971, 998])        
+        >>> mask = get_adjusted_dup_mask(t_arr, stays, mask)
+        array([  312,  356,   389, ..., 760, 771, 798])
+    """    
+    
+    traj_start_ind = np.where(time >= stays[0]['start'])[0].min()
+    traj_end_ind   = np.where(time <= stays[-1]['end'] )[0].max()
+
+    return dup_mask[(dup_mask >= traj_start_ind) & (dup_mask <= traj_end_ind)]
