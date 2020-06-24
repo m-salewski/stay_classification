@@ -125,11 +125,11 @@ def box_classifier_core(t_arr, x_arr, start_ind, last_ind, timepoint, pairs, con
             return start_ind, last_ind, mean, keep
     
     # If the stay is embedded with other stays --> This is tricky!
-    
+    '''
     if any([embedded(t0,t1, p) for p in pairs] + [embedded(p[0],p[1],[t0,t1]) for p in pairs]):
         if verbose: print("\t\t\tEmbedded, skip")   
         return start_ind, last_ind, mean, keep
-    
+    '''
 
     start_ind, last_ind, keep = t0, t1, True
     
