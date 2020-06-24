@@ -355,6 +355,33 @@ def get_adjusted_stays(segs, time_suba):
     return new_stays
 
 
+def get_stay_indices(segs, time_subarr):
+    """
+    Get the indices based on the segments
+
+    :param segs: [list(dict)] segment dictionary
+    :param time_subarr:  [np.array] reduced time-array (after masking)
+    
+    :return: [list(dict)] List of new stays
+    """
+    
+    stay_indices = []
+    
+    for seg in segs:
+
+        type_, loc_, start_, stop_ ,_ = get_seg_info(seg) 
+
+        ####TODO: generalize to any seg, since the travels are also affected.
+        if  type_ == 'stay':
+            subarr = np.where((time_subarr >= start_) & \
+                              (time_subarr <= stop_))[0]
+
+            new_t0, new_t1 = np.min(subarr),np.max(subarr)        
+
+            stay_indices.append((new_t0,new_t1))
+        
+    return stay_indices
+
 #---
 #### NOTE: Non functoinal
 # Meant to smoothen out the slopes
