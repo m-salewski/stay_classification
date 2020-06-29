@@ -115,6 +115,7 @@ def box_classifier_core(t_arr, x_arr, start_ind, last_ind, timepoint, pairs, con
         return start_ind, last_ind, mean, keep  
 
     # If the stay is less than 1 hour, check the slope of the segement --> This isn't watertight
+    '''
     if t_arr[t1]-t_arr[t0] < slope_time_thresh:         
         xdata = t_arr[t0:t1]
         ydata = x_arr[t0:t1]
@@ -123,6 +124,7 @@ def box_classifier_core(t_arr, x_arr, start_ind, last_ind, timepoint, pairs, con
         if abs(slope) > slope_thresh: 
             if verbose: print("\t\t\tslope is too big, skip")
             return start_ind, last_ind, mean, keep
+    '''
     
     # If the stay is embedded with other stays --> This is tricky!
     '''
