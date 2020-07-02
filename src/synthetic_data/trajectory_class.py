@@ -8,28 +8,38 @@ from synthetic_data.masking import get_mask_with_duplicates, get_adjusted_dup_ma
 from synthetic_data.trajectory import get_stay_segs, get_adjusted_stays
 from synthetic_data.noise import get_noisy_segs, get_noisy_path, get_noise_arr
 
+
 rand_range = lambda min_, max_, size: (max_-min_)*np.random.random_sample(size=size) + min_
 
 
-def get_time_bounds(nr_stays, time_thresh = 1/6):
-    
+def get_time_bounds(nr_stays, time_thresh, m2m_flags=[True,True]):
+        
     # Check that the stays aren't too short, ie above the time thresh
     keep_running = True
     while keep_running:
         
-        t_bounds = np.concatenate((np.array([0,24]),rand_range(0,24,2*nr_stays)))
+        
+        # Get midnight-to-midnight trajectory (set to 80% --> 80% should have mid-to-mid)
+        # TODO: adjust this so that the end points can also start/end at 00:00/23:59 independently
+        t_bounds = rand_range(0,24,2*nr_stays)
+        if m2m_flags[0]:
+            t_bounds = np.concatenate((np.array([0]),t_bounds))
+        if m2m_flags[1]:
+            t_bounds = np.concatenate((t_bounds,np.array([24])))
+
+            
+        #t_bounds = np.concatenate((np.array([0,24]),rand_range(0,24,2*nr_stays)))
         t_bounds = np.sort(t_bounds)
         
-        keep_running = any(np.abs(t_bounds[:-1:2]-t_bounds[1::2])<time_thresh)
+        keep_running = any(np.abs(t_bounds[1::2]-t_bounds[:-1:2])<time_thresh)
         
     return t_bounds
 
 
 def get_xlocs(min_, max_, size, dist_thresh):
     
-    
+    # Check that the stays aren't too close, ie within the dist thresh    
     keep_running = True
-    
     while keep_running:
         
         xlocs = rand_range(min_, max_, size)
@@ -39,7 +49,7 @@ def get_xlocs(min_, max_, size, dist_thresh):
     return xlocs
 
 
-def get_rand_stays(nr_stays=None):
+def get_rand_stays(configs, nr_stays=None):
     
     """ 
     Creates a random set of stays.
@@ -57,17 +67,28 @@ def get_rand_stays(nr_stays=None):
     # 1. make this follow a non-uniform distribution 
     # 2. iterate until the corrected number of stays matches the proposed
     #    (this will be important when the distribution is specified)
+    p,_ = np.histogram(np.random.lognormal(1.2,0.60,500),bins=np.arange(0,30,1), density=True)
     if nr_stays == None:
-        nr_stays = np.random.randint(10)
+        nr_stays = np.random.choice(np.arange(p.size),size=1,p=p)[0]
+    # flags to select whether the trajectory begins and ends on midnights
+    m2m_flags = np.random.choice(np.arange(p.size),size=2,p=p)[0:2]%5 > 0
     
     # Create the ordered timepoints for the stays
     #TODO: give the time thresh as a param
-    time_thresh = 1/6 # 10 mins
-    t_bounds = get_time_bounds(nr_stays, time_thresh)
+    t_bounds = get_time_bounds(nr_stays, configs['time_thresh'], m2m_flags)
     
     # Create the sptaial locations for the stays 
-    #TODO: these should be specified
-    xlocs = rand_range(-2.0, 2.0, int(len(t_bounds)/2))
+    #TODO: these should be specified in a config-file
+    xlocs = get_xlocs(-2.0, 2.0, int(len(t_bounds)/2), configs['dist_thresh'])
+    endpoints_flag = np.random.choice(np.arange(p.size),size=1,p=p)[0]%3
+    if nr_stays <= 2:
+        endpoints_flag = 2
+    if endpoints_flag == 0:
+        xlocs[0] = xlocs[-1]
+    elif endpoints_flag == 1:
+        xlocs[-1] = xlocs[0]
+    else:
+        pass
     
     # From the new times and locs, generate the stays
     #TODO: if checking against the proposed number of stays,
@@ -104,10 +125,10 @@ def get_rand_traj(configs):
         duplicate_frac = rand_range(0.05,0.3,1)[0]
         configs['duplicate_frac'] = duplicate_frac    
 
-    stays  = get_rand_stays()
+    stays  = get_rand_stays(configs)
 
     time_arr, raw_arr, noise_arr = get_trajectory(stays, time, configs)
-    segments = get_segments(time, stays, threshold=0.5)
+    segments = get_segments(time, stays, dist_thresh=configs['dist_thresh'])
     
     return time_arr, raw_arr, noise_arr, segments
 
@@ -124,33 +145,63 @@ def get_trajectory(stays, time, configs):
     :return: np.array An array of (raw) location points, without noise
     :return: np.array An array of noisy locations
     """
-    
-    threshold = configs['threshold']
+    time_thresh = configs['time_thresh']
+    dist_thresh = configs['dist_thresh']
     event_frac = configs['event_frac']
     duplicate_frac = configs['duplicate_frac']    
     noise_min = configs['noise_min']
     noise_max = configs['noise_max']
     
+    #print("stays:",all([abs(d['end']-d['start'])>=time_thresh for d in stays]))
+
+    
     t_segs, x_segs = get_stay_segs(stays)
 
-    raw_journey = get_journey_path(time, get_segments(time, stays, threshold))
-
-    dup_mask = get_mask_with_duplicates(time, event_frac, duplicate_frac)
-
-    dup_mask = get_adjusted_dup_mask(time, stays, dup_mask)
+    # Compute the segments
+    segments = get_segments(time, stays, dist_thresh)
     
-    time_sub = time[dup_mask]
-    raw_journey_sub = raw_journey[dup_mask]
+    # Compute the raw journey
+    raw_journey = get_journey_path(time, segments)
 
-    segments = get_segments(time, stays, threshold)
-    new_stays = get_adjusted_stays(segments, time_sub)
-    new_t_segs, new_x_segs = get_stay_segs(new_stays)      
+    keep_running = True
+    #n=0
+    while keep_running:
+        # Reduce the journey based on the event- and duplicate fractions
+        dup_mask = get_mask_with_duplicates(time, event_frac, duplicate_frac)
 
-    noises = get_noise_arr(noise_min, noise_max, len(segments))
+        dup_mask = get_adjusted_dup_mask(time, stays, dup_mask)
+        
+        time_sub = time[dup_mask]
+        raw_journey_sub = raw_journey[dup_mask]
 
-    noise_segments = get_noisy_segs(segments, noises)
+        # Using the new time sub-array, get the _adjusted_ stays and segments
+        stays_ = get_adjusted_stays(segments, time_sub)
+        
+        # Check whether to iterate again
+        keep_running = any([abs(d['end']-d['start'])<time_thresh for d in stays_])
+        #print(f"{n:3d} stays: keep_running =", keep_running)
+        segments_ = get_segments(time, stays, dist_thresh)
+        #n += 1
+     
+    #new_t_segs, new_x_segs = get_stay_segs(new_stays)      
+
+    noises = get_noise_arr(noise_min, noise_max, len(segments_))
+
+    noise_segments = get_noisy_segs(segments_, noises)
 
     noise_journey_sub = get_noisy_path(time_sub, raw_journey_sub, noise_segments)
-
-
+    
     return time_sub, raw_journey_sub, noise_journey_sub
+
+
+def pickle_trajectory(t_arr, x_arr, nx_arr, segs, path_to_file):
+    
+    import pickle
+
+    trajectory = {}
+    trajectory['segments'] = segs
+    trajectory['time_arr'] = t_arr
+    trajectory['raw_locs_arr'] = x_arr
+    trajectory['nse_locs_arr'] = nx_arr
+    
+    pickle.dump( trajectory, open( path_to_file, "wb" ) )

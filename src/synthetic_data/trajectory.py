@@ -121,7 +121,7 @@ def arr_interleave(a, b):
     return c
 
 
-def get_travels(x, stay_list, threshold=0.5):
+def get_travels(x, stay_list, dist_thresh=0.5):
     """
     Generate travels from stays (in between each stay)
     """
@@ -155,8 +155,8 @@ def get_travels(x, stay_list, threshold=0.5):
         else: 
             start2_ind = np.where((x==stop2))[0][ 0]
         
-        if np.abs(loc1-loc2) < threshold:
-            warnings.warn(f"the distance between the consecutive locations is within the threshold {threshold}")
+        if np.abs(loc1-loc2) < dist_thresh:
+            warnings.warn(f"the distance between the consecutive locations is within the threshold {dist_thresh}")
         
         # Get the slope
         #### TODO: include assert to ensure no adjacent (or overlapping) stays with div0 error
@@ -254,9 +254,9 @@ def get_journey_path(x, seg_list):
     return fff
 
 
-def get_segments(x, stays, threshold=0.5):
+def get_segments(x, stays, dist_thresh=0.5):
     
-    segments = list_interleave(stays, get_travels(x, stays, threshold))
+    segments = list_interleave(stays, get_travels(x, stays, dist_thresh))
     
     return segments
 
@@ -299,7 +299,7 @@ def get_stay_segs(stay_list):
 
     return np.array(stay_segs_t), np.array(stay_segs_x) 
 
-def get_travel_paths(x, y, seg_list, threshold=0.5):
+def get_travel_paths(x, y, seg_list, dist_thresh=0.5):
     #### NOTE: this may be irrelevant
     fff = y.copy()
     
@@ -324,12 +324,12 @@ def get_travel_paths(x, y, seg_list, threshold=0.5):
     return fff
 
 
-def get_adjusted_stays(segs, time_suba):
+def get_adjusted_stays(segs, t_arr):
     """
     Adjust the stay boundaries after the masking, as there is a reduction in the number of events
 
     :param segs: [list(dict)] segment dictionary
-    :param time_suba:  [np.array] reduced time-array (after masking)
+    :param t_arr:  [np.array] reduced time-array (after masking)
     
     :return: [list(dict)] List of new stays
     """
@@ -342,8 +342,8 @@ def get_adjusted_stays(segs, time_suba):
 
         ####TODO: generalize to any seg, since the travels are also affected.
         if  type_ == 'stay':
-            subarr = time_suba[np.where((time_suba >= start_) & \
-                                        (time_suba <= stop_))]
+            subarr = t_arr[np.where((t_arr >= start_) & \
+                                        (t_arr <= stop_))]
             
             new_t0, new_t1 = np.min(subarr),np.max(subarr)        
             
