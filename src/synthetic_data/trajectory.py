@@ -105,9 +105,6 @@ def check_stay(stay):
 get_stay_info = lambda stay: get_seg_info(stay)[1:] if check_stay(stay) else None
 #get_stay_info = lambda stay: (stay['loc'], stay['start'], stay['end'], stay['slope'])
 
-
-rand_range = lambda low, high, size: (high-low)*np.random.rand(size) + low
-
 #### TODO: move to another module
 def list_interleave(a, b):
     c = (len(a+b))*[None]

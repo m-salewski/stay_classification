@@ -5,7 +5,6 @@ import warnings
 from synthetic_data.trajectory import get_stay_paths, get_seg_mask
 
 '''
-    
 def get_stay_paths(x, seg_list):   
     
 
@@ -177,9 +176,9 @@ def get_radial_noise(x, loc, rad, sig):
 
     x = x.copy()
     
-    rand_range = lambda h, sig, l : ((sig+h)-h)*np.random.random() + l
+    rand_range_ = lambda l, h, sig: ((sig+h)-h)*np.random.random() + l
 
-    rand_radius = lambda loc, rad, sig: ((-1)**np.random.randint(0,2,1)[0] )*rand_range(rad, sig, loc)
+    rand_radius = lambda loc, rad, sig: ((-1)**np.random.randint(0,2,1)[0] )*rand_range_(loc, rad, sig)
 
     x = map_array(lambda y: rand_radius(y, 0.5, 0.01), x)
     
