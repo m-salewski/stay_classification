@@ -15,3 +15,5 @@
 6. Include functionality to change from DataFrame to arrays
     * _ie_ have the classifiers work with the DF
     * **TODO** create additional modules for handling general CSV/DataFrames
+7. Augment the scripts to include 2D
+    * start with the same time segs and apply the same noise to both arrays
