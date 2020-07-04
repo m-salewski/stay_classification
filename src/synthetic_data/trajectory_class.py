@@ -11,6 +11,10 @@ from synthetic_data.noise import get_noisy_segs, get_noisy_path, get_noise_arr
 
 rand_range = lambda min_, max_, size: (max_-min_)*np.random.random_sample(size=size) + min_
 
+'''
+TODO:
+1. update all occurences of get_trajectory in NBs & scripts to include the `segments` output
+'''
 
 def get_time_bounds(nr_stays, time_thresh, m2m_flags=[True,True]):
         
@@ -127,8 +131,8 @@ def get_rand_traj(configs):
 
     stays  = get_rand_stays(configs)
 
-    time_arr, raw_arr, noise_arr = get_trajectory(stays, time, configs)
-    segments = get_segments(time, stays, dist_thresh=configs['dist_thresh'])
+    time_arr, raw_arr, noise_arr, segments = get_trajectory(stays, time, configs)
+    #segments = get_segments(time, stays, dist_thresh=configs['dist_thresh'])
     
     return time_arr, raw_arr, noise_arr, segments
 
@@ -191,7 +195,7 @@ def get_trajectory(stays, time, configs):
 
     noise_journey_sub = get_noisy_path(time_sub, raw_journey_sub, noise_segments)
     
-    return time_sub, raw_journey_sub, noise_journey_sub
+    return time_sub, raw_journey_sub, noise_journey_sub, noise_segments
 
 
 def pickle_trajectory(t_arr, x_arr, nx_arr, segs, path_to_file):
