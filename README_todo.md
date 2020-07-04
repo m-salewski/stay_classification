@@ -8,11 +8,14 @@
 
 ## Illustration
 
-1. Find the correct NBs
+1. $\checkmark$ ~~Find the correct NBs~~
 2. Grab the figures 
     * with the overall problem
     * with the box method solution
-3. Create a final html NB
+3. Include realworld example with map and 2D1T plot
+    * make the connection to the 1D1T plots
+4. Revise and correct the text
+5. Create a final html NB
 
 ## Evaluation methods
 
