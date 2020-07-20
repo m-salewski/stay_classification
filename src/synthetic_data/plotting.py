@@ -33,7 +33,9 @@ def plot_trajectory(t_arr, x_arr, nx_arr, t_segs, x_segs, eps):
     ax.xaxis.set_major_locator(MultipleLocator(1))
     ax.xaxis.set_minor_locator(MultipleLocator(0.5))
 
-    plt.xlim(-0.05, 24.05)
+    ax.set_xlim(-0.05, 24.05)
 
-    plt.title('Trajectory', fontsize=24)
-    plt.grid(visible=True); 
+    ax.set_title('Trajectory', fontsize=24)
+    ax.grid(visible=True); 
+
+    return ax
