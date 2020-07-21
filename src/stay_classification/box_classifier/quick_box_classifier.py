@@ -19,25 +19,25 @@ def get_mini_box(time_ind_0, t_arr, loc_arr, dist_thresh, time_thresh, verbose=F
     :param loc_arr: np.array Trajectory array of locations
     :param dist_thresh: float Width of box
     :param time_thresh: float buff around timepoint      
-    
+
     :return: int endpoint index of a region
-    
     """
+
     # Set the (initial) metrics for the 'box' -- could update along the way
     time_ind = time_ind_0+1
     _, upper, lower = get_box_bounds(loc_arr[time_ind_0:time_ind], dist_thresh)
-    
+
     # Set the sizes: exit once size does not change from last_size
     last_size = 0
     curr_size = 1
-    
+
     increase_box = True
     while increase_box:
 
         # Extend the box forward in time; get the greatest timepoint in this region
         new_time = t_arr[time_ind]+time_thresh
         latest_time_ind = np.where(t_arr<=new_time)[0].max()
-        
+
         # Using a sub-array, count all events within the 'box'
         subarr = loc_arr[time_ind_0:latest_time_ind]
         event_inds = np.where((subarr <= upper) & (subarr >= lower))[0]
@@ -56,17 +56,35 @@ def get_mini_box(time_ind_0, t_arr, loc_arr, dist_thresh, time_thresh, verbose=F
 
         # Update the box
         _, upper, lower = get_box_bounds(loc_arr[time_ind_0:time_ind], dist_thresh)
-    
+
         # Update the time index
         time_ind = latest_time_ind
 
     return time_ind
 
 
-def mini_box_method(t_arr, loc_arr, dist_thresh, time_thresh, prefactor=1, verbose=False):
+def quick_box_method(t_arr, loc_arr, dist_thresh, time_thresh, prefactor=1, verbose=False):
+    """
+    Decompose an event sequence into stays by identifying which clusters of events fall within
+    the allowed distance and time thresholds which classify a stay.
 
-    latest_time_ind = 0 
-    
+    All boxes are of the same width (dist_thresh) and are at least time_thresh long.
+
+    Boxes are finalized when no events are included within the distance thresh when 
+    extending the edge by the time threshold.
+
+    :param t_arr: np.array Trajectory array of timepoints
+    :param loc_arr: np.array Trajectory array of locations
+    :param dist_thresh: float Width of box
+    :param time_thresh: float Length of time to extend the box
+    :param prefactor: float Extends the time-threshold in the cluster classifier
+    :param verboss: bool Flag to produce output.
+
+    :return: [[int,int]] endpoint indices of the identified stays
+    """
+
+    latest_time_ind = 0
+
     clusters = []
 
     clust_nr = 1
@@ -96,9 +114,9 @@ def mini_box_method(t_arr, loc_arr, dist_thresh, time_thresh, prefactor=1, verbo
                 event_inds.min()+latest_time_ind,
                 event_inds.max()+latest_time_ind
                 ])
-            if verbose: print(f"Cl. Nr. {clust_nr}: {lino}, {event_inds.size:5d}, {time_diff:8.3f}")        
+            if verbose: print(f"Cl. Nr. {clust_nr}: {lino}, {event_inds.size:5d}, {time_diff:8.3f}")
             clust_nr += 1
 
         latest_time_ind = new_latest_time_ind
-        
+
     return clusters
