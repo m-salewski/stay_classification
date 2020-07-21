@@ -1,5 +1,3 @@
-<style>.container { width:100% !important; }</style>
-
 # Introduction: movement analysis
 
 From a sequence of signaling events, _eg_ GPS measurements, determine locations where the device remains stationary for a significant duration of time; these are commonly called "stays". 
