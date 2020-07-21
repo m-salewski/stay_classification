@@ -4,17 +4,17 @@
 
 ## Current Meth
 
-**Idea**: cluster events are collected in a bounding box (cylinder in 2D1T): properly centered, the B-box should stop collecting events if extended beyond a cluster.
+**Idea**: stay events are collected in a bounding box (cylinder in 2D1T): properly centered on a statistical location, the B-box stops collecting events when at most one falls out of the current box
 
-1. Specify time-duration and location threshold
+1. Specify time-duration and distanct threshold
 2. Get initial set of points
     * use index=0, and the highest index from the time increment
-3. Get bouding box (circle) for set of points
+3. Get bonding box (circle) for set of points
 4. Count the events in the box
-5. Extend the box by the time increment and count again
-6. if count increases, repeat; else, break and restart with new starting index
+5. Extend the forward edge of the box by the time increment, include any events falling within and count again
+6. if count increases, repeat; else, break and restart with current index as new starting index
 
-_Consider_: better to stop early and then stitch (if cluster centroids are within each other's boxes? $\to$ drifting!) rather than stop later. 
+**Note**: this stops early, as soon as an event falls outside of the current box; ignoring events as outliers would be useful.
 
 ## Current issues
 
@@ -23,6 +23,11 @@ _Consider_: better to stop early and then stitch (if cluster centroids are withi
     * the density of events is high
 * the event sequence is cut too frequently
     * this is okay, possibly desired $\to$ need to then have a refinement where small clusters are aggregated into larger clusters.
+* outliers are not detected and ignored.
+* no implicit buffers around events are considered
+    * _e.g._ each event has a null-uncertainty and is included in a box _only_ when it is within the box
+    * generally, each event has a nonzero uncertainty which could intersect a box with higher probability
+        * this would call for more advanced methods.
 
 ## ToDos
 
