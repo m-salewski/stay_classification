@@ -52,12 +52,12 @@ def plot_trajectory(t_arr, x_arr, nx_arr, t_segs, x_segs, eps):
         ymax = max([x for x in x_segs.tolist() if x != None])+1*eps         
     
     if (t_arr is not None) & (x_arr is not None):
-        plt.plot(t_arr, x_arr, ':', label='raw journey')
+        plt.plot(t_arr, x_arr, ':', color='C0', label='raw journey')
         ymin = x_arr.min()-1*eps
         ymax = x_arr.max()+1*eps
     
     if (t_arr is not None) & (nx_arr is not None):
-        plt.plot(t_arr, nx_arr, '.-', label='noisy journey', alpha=0.25)
+        plt.plot(t_arr, nx_arr, '.-', color='C1', label='noisy journey', alpha=0.25)
         ymin = nx_arr.min()-1*eps
         ymax = nx_arr.max()+1*eps        
 

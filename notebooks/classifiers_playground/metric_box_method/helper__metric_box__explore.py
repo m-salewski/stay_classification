@@ -50,6 +50,53 @@ def get_boxplot_centers(t_arr, x_arr, clusters):
         ys = x_arr[clust]
 
         # Mask to include only events within the IQR
+        q5l = np.quantile(ys,0.5, interpolation='lower')
+        q5h = np.quantile(ys,0.5, interpolation='higher')
+
+        data.append((q5l+q5h)*0.5)
+        positions.append((xs[-1]+xs[0])/2)
+        
+    return data, positions
+
+def get_boxplot_lines(t_arr, x_arr, clusters):
+    
+    data = []
+    labels = []
+    positions = []
+    widths = []
+
+    for cl_nr, clust in enumerate(clusters):
+
+        # Get the subseqs
+        xs = t_arr[clust]
+        ys = x_arr[clust]
+
+        # Mask to include only events within the IQR
+        q5l = np.quantile(ys,0.5, interpolation='lower')
+        q5h = np.quantile(ys,0.5, interpolation='higher')
+
+        data.append((q5l+q5h)*0.5)
+        data.append((q5l+q5h)*0.5)
+        
+        positions.append(xs[0])
+        positions.append(xs[-1])        
+        
+    return data, positions
+
+def get_boxplot_iqr_midpoints(t_arr, x_arr, clusters):
+    
+    data = []
+    labels = []
+    positions = []
+    widths = []
+
+    for cl_nr, clust in enumerate(clusters):
+
+        # Get the subseqs
+        xs = t_arr[clust]
+        ys = x_arr[clust]
+
+        # Mask to include only events within the IQR
         q25 = np.quantile(ys,0.25, interpolation='lower')
         q75 = np.quantile(ys,0.75, interpolation='higher')
 
@@ -57,7 +104,6 @@ def get_boxplot_centers(t_arr, x_arr, clusters):
         positions.append((xs[-1]+xs[0])/2)
         
     return data, positions
-
 
 get_err = lambda x1, x2: np.sqrt((x1-x2)**2)
 
