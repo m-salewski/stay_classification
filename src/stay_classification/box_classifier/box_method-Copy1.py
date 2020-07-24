@@ -4,16 +4,16 @@ import numpy.ma as ma
 tdiff = lambda x : np.concatenate([np.array([0.0]), x[1:]-x[:-1]])
 
 time_thresh = 5/12
-eps=0.25
+dist_thresh=0.25
 min_samples = 50
     
 from stay_classification.checks import check_means
 
 
-def get_thresh_duration(eps, mean):
+def get_thresh_duration(dist_thresh, mean):
     
-    upper = mean+eps
-    lower = mean-eps
+    upper = mean+dist_thresh
+    lower = mean-dist_thresh
     
     def meth(sub_arr, start):
         
@@ -27,7 +27,7 @@ def get_thresh_duration(eps, mean):
 def get_thing():
     return 'this'
 
-def asymm_box_method(t_arr,time_thresh,x_loc,eps,timepoint, verbose=False):
+def asymm_box_method(t_arr,time_thresh,x_loc,dist_thresh,timepoint, verbose=False):
     
     count_thresh = 50
         
@@ -39,7 +39,7 @@ def asymm_box_method(t_arr,time_thresh,x_loc,eps,timepoint, verbose=False):
     mean = np.mean(x_loc[new_start:new_end])
 
     tdiffs2 = [t_arr[new_end]-t_arr[new_start]]
-    counts2 = [get_counts(eps,mean)(x_loc[new_start:new_end])]
+    counts2 = [get_counts(dist_thresh,mean)(x_loc[new_start:new_end])]
 
     means = [mean]
 
@@ -56,12 +56,12 @@ def asymm_box_method(t_arr,time_thresh,x_loc,eps,timepoint, verbose=False):
     while keep_running:
 
         # Get the current count of events --> OBSOLETE
-        count = get_counts(eps,mean)(x_loc[new_start:new_end])
+        count = get_counts(dist_thresh,mean)(x_loc[new_start:new_end])
 
         if (new_start > 1):
             new_start -= 1
 
-        mean = get_thresh_mean(eps,mean)(x_loc[new_start:new_end])
+        mean = get_thresh_mean(dist_thresh,mean)(x_loc[new_start:new_end])
         means.append(mean)    
 
         new_starts.append(new_start)
@@ -92,13 +92,13 @@ def asymm_box_method(t_arr,time_thresh,x_loc,eps,timepoint, verbose=False):
     while keep_running:
 
         # Get the current count of events --> OBSOLETE
-        count = get_counts(eps,mean)(x_loc[new_start:new_end])
+        count = get_counts(dist_thresh,mean)(x_loc[new_start:new_end])
 
         # check if the index is within bounds
         if (new_end < len(t_arr)-1):
             new_end += 1
 
-        mean = get_thresh_mean(eps,mean)(x_loc[new_start:new_end])
+        mean = get_thresh_mean(dist_thresh,mean)(x_loc[new_start:new_end])
         means.append(mean)    
 
         #new_starts.append(new_start)
@@ -146,9 +146,9 @@ def extend_box(x_loc, working_index, fixed_index, means, count_thresh = 50):
         
         # Update and store the mean
         if direction == -1:
-            mean = get_thresh_mean(eps,mean)(x_loc[working_index:fixed_index])
+            mean = get_thresh_mean(dist_thresh,mean)(x_loc[working_index:fixed_index])
         else:
-            mean = get_thresh_mean(eps,mean)(x_loc[fixed_index:working_index])
+            mean = get_thresh_mean(dist_thresh,mean)(x_loc[fixed_index:working_index])
         means.append(mean)    
         
         # When the mean either converges or stops
@@ -161,10 +161,10 @@ def extend_box(x_loc, working_index, fixed_index, means, count_thresh = 50):
     return means, indices, keep_running
 
 
-def get_counts(eps, mean):
+def get_counts(dist_thresh, mean):
     
-    upper = mean+eps
-    lower = mean-eps
+    upper = mean+dist_thresh
+    lower = mean-dist_thresh
     
     def meth(sub_arr):
         
@@ -173,10 +173,10 @@ def get_counts(eps, mean):
     return meth
 
 
-def get_thresh_mean(eps, mean):
+def get_thresh_mean(dist_thresh, mean):
     
-    upper = mean+eps
-    lower = mean-eps
+    upper = mean+dist_thresh
+    lower = mean-dist_thresh
     
     def meth(sub_arr):
         
@@ -200,7 +200,7 @@ def get_converged(converged, means, indices, count_thresh):
     
     return last_mean, last_index
 
-def asymm_box_method_modular(t_arr, time_thresh, x_loc, eps, timepoint, count_thresh = 50, verbose=False):
+def asymm_box_method_modular(t_arr, time_thresh, x_loc, dist_thresh, timepoint, count_thresh = 50, verbose=False):
         
     # 1.
     # Initialize and store the start, end points from the timepoint

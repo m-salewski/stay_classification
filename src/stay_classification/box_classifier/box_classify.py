@@ -18,25 +18,25 @@ def get_bounded_indices(sub_arr, center, offset, configs):
     :return: int Upper (global) index of the region 
     """
     
-    eps = configs['eps']
+    dist_thresh = configs['dist_thresh']
     
     # TODO: this fails when x_sub_arr.size = 0
-    mask =  get_mask(sub_arr, center, eps, offset)
+    mask =  get_mask(sub_arr, center, dist_thresh, offset)
 
     return mask.min(), mask.max(0)
 
 
 # TODO: check if needed, and where --> maybe for debugging
-def get_counts(sub_arr, mean, eps):
+def get_counts(sub_arr, mean, dist_thresh):
     """
     """
     
-    return get_mask(sub_arr, mean, eps).size
+    return get_mask(sub_arr, mean, dist_thresh).size
 
 #TODO: checks args ordering
-def get_slope(t_sub_arr, x_sub_arr, mean, eps):
+def get_slope(t_sub_arr, x_sub_arr, mean, dist_thresh):
     """
-    Get the slope for the region; excludes outliers using mean +/- eps
+    Get the slope for the region; excludes outliers using mean +/- dist_thresh
 
     :param t_sub_arr: np.array Subarray of trajectory array of times    
     :param x_sub_arr: np.array Subarray of trajectory array of locations
@@ -47,7 +47,7 @@ def get_slope(t_sub_arr, x_sub_arr, mean, eps):
     :return: float New value for mean without the outliers
     """
             
-    mask =  get_mask(x_sub_arr, mean, eps)
+    mask =  get_mask(x_sub_arr, mean, dist_thresh)
     
     ub_xdata = t_sub_arr[mask] - t_sub_arr[mask].mean()
     ub_ydata = x_sub_arr[mask] - x_sub_arr[mask].mean()
@@ -76,7 +76,7 @@ def box_classifier_core(t_arr, x_arr, start_ind, last_ind, timepoint, pairs, con
 
     # Get some configs
     time_thresh = configs['time_thresh']    
-    eps = configs['eps']
+    dist_thresh = configs['dist_thresh']
     slope_time_thresh = configs['slope_time_thresh']
     slope_thresh = configs['slope_thresh']
 
@@ -119,7 +119,7 @@ def box_classifier_core(t_arr, x_arr, start_ind, last_ind, timepoint, pairs, con
     if t_arr[t1]-t_arr[t0] < slope_time_thresh:         
         xdata = t_arr[t0:t1]
         ydata = x_arr[t0:t1]
-        slope = get_slope(xdata, ydata, mean, eps)
+        slope = get_slope(xdata, ydata, mean, dist_thresh)
         if verbose: print(f"\tAt {timepoint:.3f}, slope = {slope:.3f}")
         if abs(slope) > slope_thresh: 
             if verbose: print("\t\t\tslope is too big, skip")

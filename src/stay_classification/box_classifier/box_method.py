@@ -67,7 +67,7 @@ def extend_edge(t_arr, x_arr, working_index, fixed_index, means, configs, verbos
     """
     
     count_thresh = configs['count_thresh']
-    eps = configs['eps']
+    dist_thresh = configs['dist_thresh']
     
     keep_running = (working_index > 1) & (working_index < len(x_arr)-1)
     
@@ -91,9 +91,9 @@ def extend_edge(t_arr, x_arr, working_index, fixed_index, means, configs, verbos
         
         # Update and store the mean
         if direction == -1:
-            mean = get_thresh_mean(x_arr[working_index:fixed_index], mean, eps)
+            mean = get_thresh_mean(x_arr[working_index:fixed_index], mean, dist_thresh)
         else:
-            mean = get_thresh_mean(x_arr[fixed_index:working_index], mean, eps)
+            mean = get_thresh_mean(x_arr[fixed_index:working_index], mean, dist_thresh)
         
         means.append(mean)    
         
@@ -131,16 +131,16 @@ def extend_edge(t_arr, x_arr, working_index, fixed_index, means, configs, verbos
                     
         #print(f"{t_arr[working_index]:.3f} {time_diff:.3f} {ctime_diff:.3f}", \
         #      len(indices), fixed_index, working_index, converged_mean_ind0, converged_mean_ind, \
-        #      f"\t{mean:.5f} {x_arr[working_index]:.3f} {mean+eps:.5f}",)#,[m == m0 for m in means[-count_thresh:]])            
+        #      f"\t{mean:.5f} {x_arr[working_index]:.3f} {mean+dist_thresh:.5f}",)#,[m == m0 for m in means[-count_thresh:]])            
                     
         keep_running = (working_index > 1) & (working_index < len(x_arr)-1)
 
     return means, indices, keep_running
 
 
-def get_thresh_mean(x_sub_arr, mean, eps):
+def get_thresh_mean(x_sub_arr, mean, dist_thresh):
     """
-    Get the mean for all events contained within the box (mean+/-eps)
+    Get the mean for all events contained within the box (mean+/-dist_thresh)
     
     :param x_sub_arr: np.array Subarray of trajectory array of locations
     :param working_index: float Centreline used to define the box    
@@ -149,7 +149,7 @@ def get_thresh_mean(x_sub_arr, mean, eps):
     :return: float New value for mean without the outliers
     """
     
-    mask =  get_mask(x_sub_arr, mean, eps)
+    mask =  get_mask(x_sub_arr, mean, dist_thresh)
 
     return np.mean(x_sub_arr[mask])
         
@@ -207,7 +207,7 @@ def make_box(t_arr, x_arr, timepoint, configs, verbose=False):
     
     # 0. Configs        
     time_thresh = configs['time_thresh']
-    eps = configs['eps']
+    dist_thresh = configs['dist_thresh']
     count_thresh = configs['count_thresh']
               
     # 1. Initialization
