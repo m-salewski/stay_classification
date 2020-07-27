@@ -27,19 +27,29 @@ def get1():
     return gen_stays(t_bounds, x_locs)
 
 
-def get2(x_dist=1.0):
+def get2(x_shift=0, x_dist=1.0):
 
-    # 2 stays
     
+    # 2 stays
+    # x_shift
+    # midpoint: 0
+    # shifted right: -5.4, 
+    # shifted left: 5.4
+    
+    if x_shift > 0:
+        x_shift = min(x_shift, 5.7)
+    if x_shift < 0:
+        x_shift = max(x_shift, -5.7)
+        
     x_midpt_1 = -x_dist/2
     x_midpt_2 = +x_dist/2    
     
     x_locs = [x_midpt_1, x_midpt_2]
     
     t_dist = abs(12 - get_t(12, x_locs[0], 0, mind_speed))
-    t_bounds = [6.0, 
-                12-t_dist, 
-                12+t_dist,
+    t_bounds = [ 6, 
+                12-x_shift-t_dist, 
+                12-x_shift+t_dist,
                 18.0] 
 
     return gen_stays(t_bounds, x_locs)
@@ -63,6 +73,8 @@ def get3_core(x_locs, middle_len):
 def get3e(x_dist=1.0, middle_len=1.0):
 
     # 3 stays, 2 equal
+    #get3e(0.50, (1/6 -- 5.66))
+    
     
     x_midpt_1 = -x_dist/2
     x_midpt_2 = +x_dist/2    
