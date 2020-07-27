@@ -56,7 +56,11 @@ def extend_edge(t_arr, x_arr, working_index, fixed_index, means, configs, verbos
 
     :param t_arr: np.array Trajectory array of timepoints
     :param x_arr: np.array Trajectory array of locations
-    :param working_index: np.array Timepoint used to find the box    
+    :param working_index: np.array Timepoint index to be extended
+    :param fixed_index: np.array Timepoint index to be fixed
+    :param fixed_index: [float] List of means; only one is used
+        
+    
     :param configs: dict containing the parameters used to define the box
     :param verbose: bool To select printing metrics to stdio
     

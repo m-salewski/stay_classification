@@ -1,7 +1,13 @@
 import numpy as np
 
+def get_iqr(data):
+    
+    q25 = np.quantile(data, 0.25, interpolation='lower')
+    q75 = np.quantile(data, 0.75, interpolation='higher')
+    return abs(q75 - q25)
+
 def iqr_metrics(data, iqr_fact=1.5):
-    # Mask to include only events within the IQR
+    
     q25 = np.quantile(data, 0.25, interpolation='lower')
     q75 = np.quantile(data, 0.75, interpolation='higher')
     iqr = abs(q75 - q25)
@@ -105,7 +111,7 @@ def get_boxplot_iqr_midpoints(t_arr, x_arr, clusters):
         
     return data, positions
 
-get_err = lambda x1, x2: np.sqrt((x1-x2)**2)
+get_err = lambda x1, x2: abs(x1-x2) #np.sqrt((x1-x2)**2)
 
 def get_clusters_rev(t_arr, loc_arr, dist_thresh, time_thresh, verbose=False):
 
@@ -146,6 +152,7 @@ def get_clusters_rev(t_arr, loc_arr, dist_thresh, time_thresh, verbose=False):
 
         err1 = get_err(cluster_mean, event_loc)
         err2 = get_err(cluster_mean, new_cluster_mean)
+        
         if verbose: print(n, err1, err2, dist_thresh)
  
         # Checks: 
@@ -184,3 +191,40 @@ def get_iqr_mask(x_arr, cluster, within=True):
     else:
         return np.where((x_arr <= (q25 - iqr_fact * iqr)) | (x_arr >= (q75 + iqr_fact * iqr)))
     
+    
+import os, sys
+sys.path.append('/home/sandm/Notebooks/stay_classification/src/')
+from synthetic_data.trajectory import get_stay_segs, get_adjusted_stays
+from synthetic_data.trajectory_class import get_rand_traj
+from synthetic_data.plotting import plot_trajectory, add_plot_seg_boxes
+
+def eval_synth_data(segments, time_arr, clusters):
+
+    # Get the actual stay indices and create the labels for each event
+    from synthetic_data.trajectory import get_stay_indices
+    
+    true_indices = get_stay_indices(get_adjusted_stays(segments, time_arr), time_arr)
+    true_labels = np.zeros(time_arr.shape)
+
+    for pair in true_indices:
+        true_labels[pair[0]:pair[1]+1] = 1
+
+    # Get the predicted labels for each event
+    final_pairs = []
+    for clust in clusters:
+        final_pairs.append([clust[0],clust[-1]])
+    pred_labels = np.zeros(time_arr.shape)
+
+    for pair in final_pairs:
+        pred_labels[pair[0]:pair[1]+1] = 1
+
+    # Evaluate using prec. and rec.
+    from sklearn.metrics import precision_score, recall_score, confusion_matrix
+
+    prec = precision_score(true_labels, pred_labels)
+    rec  = recall_score(true_labels, pred_labels)
+
+    # Eval. using confuse. matrix
+    conf_mat = confusion_matrix(true_labels, pred_labels)
+    
+    return prec, rec, conf_mat

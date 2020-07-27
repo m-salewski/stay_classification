@@ -78,3 +78,27 @@ def plot_trajectory(t_arr, x_arr, nx_arr, t_segs, x_segs, eps):
     ax.grid(visible=True); 
 
     return ax
+
+
+def add_plot_seg_boxes(t_segs, x_segs, dist_thresh, ax):
+    
+    from matplotlib.collections import PatchCollection
+    from matplotlib.patches import Rectangle
+
+    for n in range(0,len(t_segs),3):
+
+        begin = t_segs[n]
+        end = t_segs[n+1]
+
+        loc = x_segs[n]
+
+        rect = Rectangle((begin, loc-dist_thresh), end-begin, 2*dist_thresh)
+
+        # Create patch collection with specified colour/alpha
+        pc = PatchCollection([rect], \
+                             facecolor='gray', alpha=0.2, edgecolor='k',linewidth=0)
+
+        # Add collection to axes
+        ax.add_collection(pc)
+        
+    return None
