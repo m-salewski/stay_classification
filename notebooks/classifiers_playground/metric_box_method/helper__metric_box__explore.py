@@ -1,15 +1,84 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+def get_cluster_boxplots(old_clusts, new_clusts, t_arr, x_arr, ax, color, linestyle, legend_label, bbox_tuple):
+
+    bp_data, labels, positions, widths = get_boxplot_quants(t_arr, x_arr, old_clusts)
+
+    bplots = ax.boxplot(bp_data, labels=labels, positions=positions, widths=widths,
+                        boxprops=dict(color=color, linewidth=1.0, linestyle='--', dashes=[3,2], alpha=0.5), 
+                        capprops=dict(color=color, linewidth=1.0, linestyle='-', alpha=0.5),
+                        whiskerprops=dict(color=color, linewidth=1.0, linestyle='--', dashes=[3,2], alpha=0.5),
+                        flierprops=dict(color=color, markeredgecolor=color))
+
+    ax.legend([legend_label], bbox_to_anchor=bbox_tuple, loc='center right', ncol=1);
+    
+    bp_data, labels, positions, widths = get_boxplot_quants(t_arr, x_arr, new_clusts)
+    
+    _ = ax.boxplot(bp_data, labels=labels, positions=positions, widths=widths, patch_artist=True, 
+                         boxprops=dict(color=color, alpha=0.1, linewidth=0, facecolor=color),
+                         capprops=dict(color=color, alpha=0.1),
+                         whiskerprops=dict(color=color, alpha=0.1),
+                         flierprops=dict(color=color, markeredgecolor=color, alpha=0.1))                   
+
+    return ax
+
+kwargs_unfilled = dict(color='red', linewidth=1.0, linestyle='--', dashes=[3,2], alpha=0.5, patch_artist=False)
+kwargs_filled=dict(color='red', linewidth=0.0, linestyle='None', dashes='None', alpha=0.1, patch_artist=True)
+                  
+def get_cluster_boxplot(clusters, t_arr, x_arr, ax, **kwargs):
+    
+    color = kwargs['color']
+    ls = kwargs['linestyle']
+    lw = kwargs['linewidth']
+    leg_lab = kwargs['legend_label']
+    bbox_tup = kwargs['bbox_tuple']
+    alpha = kwargs['alpha']
+    dashes = kwargs['dashes']
+    pat_art = kwargs['patch_artist']
+    
+    boxprops    =dict(color=color, linewidth=lw, linestyle=ls, alpha=alpha)
+    whiskerprops=dict(color=color, linewidth=lw, linestyle=ls, alpha=alpha)  
+    flierprops  =dict(color=color, markeredgecolor=color)
+    if pat_art:
+        boxprops['facecolor']=color
+        flierprops['markerfacecolor']=color
+    else:
+        boxprops['dashes']=dashes
+        whiskerprops['dashes']=dashes
+        
+    capprops    =dict(color=color, linewidth=lw, linestyle='-', alpha=alpha)
+    
+    bp_data, labels, positions, widths = get_boxplot_quants(t_arr, x_arr, clusters)
+
+    bplots = ax.boxplot(bp_data, labels=labels, positions=positions, widths=widths, patch_artist=pat_art,
+                        boxprops=boxprops, capprops=capprops, whiskerprops=whiskerprops, flierprops=flierprops)
+    if leg_lab != None:
+        ax.legend([leg_lab], bbox_to_anchor=bbox_tup, loc='center right', ncol=1)
+    
+    return ax
+
+
+# ---
+
+def _get_iqr(data):
+    
+    q25 = np.quantile(data, 0.25, interpolation='lower')
+    q75 = np.quantile(data, 0.75, interpolation='higher')
+    return q25, q75
+
 
 def get_iqr(data):
     
-    q25 = np.quantile(data, 0.25, interpolation='lower')
-    q75 = np.quantile(data, 0.75, interpolation='higher')
+    q25, q75 = _get_iqr(data)
+    
     return abs(q75 - q25)
+
 
 def iqr_metrics(data, iqr_fact=1.5):
     
-    q25 = np.quantile(data, 0.25, interpolation='lower')
-    q75 = np.quantile(data, 0.75, interpolation='higher')
+    q25, q75 = _get_iqr(data)
+    
     iqr = abs(q75 - q25)
 
     iqr_boost = iqr*iqr_fact
@@ -18,6 +87,31 @@ def iqr_metrics(data, iqr_fact=1.5):
     min_range = ys[np.where(ys < q75+iqr_boost )].max() - ys[np.where(ys > q25-iqr_boost )].min()
     
     return full_range, min_range
+
+
+def get_iqr_mask(x_arr, cluster, iqr_fact = 1.5, within=True):
+
+    #TODO: rename `x_arr` --> `sub_arr`, `cluster` --> `offset` 
+    
+    # Mask to include only events within the IQR
+    q25, q75 = _get_iqr(x_arr)
+    
+    iqr = abs(q75 - q25)
+    
+    sub_arr = x_arr.copy()
+    
+    if within:
+        mask = np.where((sub_arr > (q25 - iqr_fact * iqr)) & (sub_arr < (q75 + iqr_fact * iqr)))
+        
+    else:
+        mask =  np.where((sub_arr <= (q25 - iqr_fact * iqr)) | (sub_arr >= (q75 + iqr_fact * iqr)))
+    
+    mask[0][:] += cluster[0]
+    
+    return mask
+
+
+# --- 
 
 
 def get_boxplot_quants(t_arr, x_arr, clusters):
@@ -177,31 +271,17 @@ def get_clusters_rev(t_arr, loc_arr, dist_thresh, time_thresh, verbose=False):
             
     return clusters
 
-
-def get_iqr_mask(x_arr, cluster, within=True):
-
-    # Mask to include only events within the IQR
-    q25 = np.quantile(x_arr, 0.25, interpolation='lower')
-    q75 = np.quantile(x_arr, 0.75, interpolation='higher')
-    iqr = abs(q75 - q25)
-    iqr_fact = 1.5
-        
-    if within:
-        return np.where((x_arr > (q25 - iqr_fact * iqr)) & (x_arr < (q75 + iqr_fact * iqr)))
-    else:
-        return np.where((x_arr <= (q25 - iqr_fact * iqr)) | (x_arr >= (q75 + iqr_fact * iqr)))
-    
     
 import os, sys
 sys.path.append('/home/sandm/Notebooks/stay_classification/src/')
-from synthetic_data.trajectory import get_stay_segs, get_adjusted_stays
-from synthetic_data.trajectory_class import get_rand_traj
-from synthetic_data.plotting import plot_trajectory, add_plot_seg_boxes
+#from synthetic_data.trajectory import get_stay_segs, get_adjusted_stays
+#from synthetic_data.trajectory_class import get_rand_traj
+#from synthetic_data.plotting import plot_trajectory, add_plot_seg_boxes
 
 def eval_synth_data(segments, time_arr, clusters):
 
     # Get the actual stay indices and create the labels for each event
-    from synthetic_data.trajectory import get_stay_indices
+    from synthetic_data.trajectory import get_stay_indices, get_adjusted_stays
     
     true_indices = get_stay_indices(get_adjusted_stays(segments, time_arr), time_arr)
     true_labels = np.zeros(time_arr.shape)
@@ -228,3 +308,167 @@ def eval_synth_data(segments, time_arr, clusters):
     conf_mat = confusion_matrix(true_labels, pred_labels)
     
     return prec, rec, conf_mat
+
+
+def get_clusters_x(t_arr, loc_arr, dist_thresh, time_thresh, verbose=False):
+    """
+    Get a list of cluster indices
+
+    :param t_arr: np.array Trajectory array of timepoints
+    :param timepoint: float Timepoint
+    :param time_thresh: float buff around timepoint  
+    :param direction: int gets the min or max index of a region
+    
+    :return: int endpoint index of a region
+    
+    """
+    get_err = lambda x1, x2: abs(x1-x2) #np.sqrt((x1-x2)**2)
+    
+    # Output list of indices: [[beg., end],[beg., end], ...] 
+    clusters = []
+
+    m = 0
+
+    # The current cluster indices: [n_0, n_1, ... ]
+    new_cluster = []
+    
+    # Pass through the list of events
+    for n in range(0,loc_arr.size-3):
+
+        # Check: is the time within the time thresh?
+        if abs(t_arr[n+1] - t_arr[n]) <= time_thresh:
+            event_loc = loc_arr[n+1]
+        else: 
+            continue
+
+        # Get the current cluster mean
+        cluster_mean = np.mean(loc_arr[m:n+1])
+
+        # Get the potential cluster mean    
+        new_cluster_mean = np.mean(loc_arr[m:n+2])
+
+        err1 = get_err(cluster_mean, event_loc)
+        err2 = get_err(cluster_mean, new_cluster_mean)
+        
+        if verbose: print(f"{n:5d}, {err1:7.3f}, {err2:7.3f}, {dist_thresh:7.3f}")
+ 
+        # Checks: 
+        # 1. new event is within dist. thresh of current clust.
+        # 2. new mean - current mean is within dist. thresh.
+        if  (err1 < dist_thresh) & (err2 < dist_thresh) & \
+            (n <= loc_arr.size-5):
+            #if verbose: print("append")
+            new_cluster.append(n)
+        else:
+            # Save the current cluster and prepare restart
+            txt = f'Trying {n} '
+            app = "Nope"
+            if (len(new_cluster) >= 2):
+                # Since this is an incomplete method (clusters will be merged after), 
+                # can keep this; otherwise, would lose small clusters
+                #if (abs(t_arr[new_cluster[-1]]-t_arr[new_cluster[0]]) > time_thresh):
+                clusters.append(new_cluster)
+                app = 'closed'
+            #if verbose: print(txt+app)
+            new_cluster = []
+
+            # Update starting point
+            m=n+1
+            
+    return clusters
+
+# --- 
+
+from stay_classification.box_classifier.box_classify import box_classifier_core
+from stay_classification.box_classifier.box_method import get_mask, make_box,get_directional_indices, extend_edge
+
+def extend_cluster(t_arr, x_arr, cluster, configs, verbose=False):
+    
+    results = extend_edge(t_arr, x_arr, cluster[-1], cluster[0], [x_arr[cluster].mean()], configs, verbose)
+
+    cluster += results[1]
+
+    results = extend_edge(t_arr, x_arr, cluster[0], cluster[-1], [x_arr[cluster].mean()], configs, verbose)
+
+    cluster = results[1] + cluster
+
+    return cluster
+
+def intersecting_bounds(a1,a2,b1,b2):
+    
+    return (((a1 >= b1) & (a1 <= b2)) | 
+            ((a2 >= b1) & (a2 <= b2)) | 
+            ((b1 >= a1) & (b1 <= a2)) | 
+            ((b2 >= a1) & (b2 <= a2)))    
+
+inter_bounds = lambda p1, p2: intersecting_bounds(p1[0],p1[-1],p2[0],p2[-1])
+
+def extend_clusters(t_arr, x_arr, clusters, configs, verbose=False):
+    
+    from stay_classification.box_classifier.box_method import extend_edge
+
+    new_clusters = [extend_cluster(t_arr, x_arr, clusters[0].copy(), configs, verbose)]
+    
+    
+    dist_thresh = configs['dist_thresh']
+    
+    for clust in clusters[1:]:
+        
+        c = extend_cluster(t_arr, x_arr, clust.copy(), configs, verbose)
+        
+        # check the IQR is within the allowed threshold
+        dist_criterion = False
+        if get_iqr(x_arr[c])<2*dist_thresh:
+            dist_criterion = True
+            
+        c_last = new_clusters[-1]            
+        
+        # Check if new cluster overlaps with the previous one
+        embed_criterion = False
+        if len(new_clusters)>0:
+            embed_criterion = inter_bounds(c,c_last)        
+        
+        print(f"[{ clust[0]:4d},{ clust[-1]:4d}]," + "\t"\
+              f"{t_arr[clust[0]]:6.3f}...{t_arr[clust[-1]]:6.3f}" + "\t"\
+              f"{x_arr[clust].mean():6.3f}," + "\t"\
+              f"{get_iqr(x_arr[clust]):6.3f}," + "\t\t\t"\
+              f"[{ c[0]:4d},{ c[-1]:4d}]," + "\t"\
+              f"{t_arr[c[0]]:6.3f}...{t_arr[c[-1]]:6.3f}" + "\t"\
+              f"{x_arr[c].mean():6.3f}," + "\t"\
+              f"{get_iqr(x_arr[c]):6.3f},", \
+              dist_criterion, embed_criterion)
+        
+        
+        # check the IQR is within the allowed threshold
+        dist_criterion0 = False
+        if get_iqr(x_arr[clust])<2*dist_thresh:
+            dist_criterion0 = True
+                    
+        # Check if new cluster overlaps with the previous one
+        embed_criterion0 = False
+        if len(new_clusters)>0:
+            embed_criterion0 = inter_bounds(clust,c_last) 
+            
+        if dist_criterion & (not embed_criterion):
+            new_clusters.append(c)
+        elif dist_criterion0 & (not embed_criterion0) & (get_iqr(x_arr[clust]) < get_iqr(x_arr[c])):
+            new_clusters.append(clust)
+        '''if len(new_clusters)>0:
+            embed_criterion = inter_bounds(c,c_last)
+            print(f"[{ c[0]:4d},{ c[-1]:4d}]," + "\t"\
+                  f"[{c_last[0]:4d},{c_last[-1]:4d}]")
+
+        # ... if there is an overlap, get the one with the smaller IQR
+        # ... 1. remove last, append new if dist_crit == True
+        if dist_criterion & embed_criterion:
+            if get_iqr(noise_arr[c])<get_iqr(noise_arr[c_last]):
+                new_clusters[-1] = c       
+            else:
+                pass
+        # ... if no overlap and dist_crit == True, append
+        elif dist_criterion & (not embed_criterion):
+            new_clusters.append(c)
+        else:
+            pass'''
+    
+    return new_clusters
