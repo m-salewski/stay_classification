@@ -278,13 +278,13 @@ sys.path.append('/home/sandm/Notebooks/stay_classification/src/')
 #from synthetic_data.trajectory_class import get_rand_traj
 #from synthetic_data.plotting import plot_trajectory, add_plot_seg_boxes
 
-def eval_synth_data(segments, time_arr, clusters):
+def eval_synth_data(segments, t_arr, clusters):
 
     # Get the actual stay indices and create the labels for each event
     from synthetic_data.trajectory import get_stay_indices, get_adjusted_stays
     
-    true_indices = get_stay_indices(get_adjusted_stays(segments, time_arr), time_arr)
-    true_labels = np.zeros(time_arr.shape)
+    true_indices = get_stay_indices(get_adjusted_stays(segments, t_arr), t_arr)
+    true_labels = np.zeros(t_arr.shape)
 
     for pair in true_indices:
         true_labels[pair[0]:pair[1]+1] = 1
@@ -293,7 +293,7 @@ def eval_synth_data(segments, time_arr, clusters):
     final_pairs = []
     for clust in clusters:
         final_pairs.append([clust[0],clust[-1]])
-    pred_labels = np.zeros(time_arr.shape)
+    pred_labels = np.zeros(t_arr.shape)
 
     for pair in final_pairs:
         pred_labels[pair[0]:pair[1]+1] = 1
@@ -472,3 +472,11 @@ def extend_clusters(t_arr, x_arr, clusters, configs, verbose=False):
             pass'''
     
     return new_clusters
+
+
+"""
+Okay, i want to share something with you. Like a birthday gift. of course, it's late. But i think i can tell it now.
+You understood, at least in some light sense, that I have to cope with depression. During the lockdown, I restarted meditation. Usually, i start by letting my thoughts drift along while trying to remember what happened in the day, what was significant, good, not so good, etc. I call this my pre-meditation; it's like a warm up and allows some of the thoughts to be recognized and calmed. Then after this, I go to a more neutral meditation where I try to then focus and let all the stuff drift by while maintaining the focus: the puppy, but as I've said, it think it's more like a bunch of puppies all on different leashes, going everywhere.
+So I was (and still am) doing this when you went back to PT. On one of the days after you arrived, during my pre-meditation, I was also having ideas about being biased towards negativity, and thinking about being happy, when the last time i was happy. And nothing really came up. But it was okay, there were other thoughts in the queue and I moved on. Then, I went into the usual meditation. ANd the thoughts were wandering, as they do, and it hit me that those nights we shared together, in the beginning, texting a for a week or so and then the museum and kblau; all that made me happy. I was happy then. And it brought me to a smile, more like a laugh cuz it made a noise and my eyes slightly squeezed; like a pure moment of smiling. And it totally broke into my meditation. Took me completely out of it so I couldn't go back to meditation that night. 
+It's not much but it's a notion that you came in to my life and touched me in a nice way and we had a connection, no matter how short. 
+"""
