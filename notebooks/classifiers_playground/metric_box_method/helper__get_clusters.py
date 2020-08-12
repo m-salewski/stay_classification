@@ -248,197 +248,84 @@ def get_clusters_3(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
         
     # Output list of indices: [[beg., end],[beg., end], ...] 
     clusters = []
-
-    # The current cluster indices: [n_0, n_1, ... ]
-    new_cluster = []
     
-    # Pass through the list of events
-    #for n in range(0,x_arr.size-3):
     # Initialize working indices
-    m, n = 0, 0
-    #while n < x_arr.size-2:
-    for n in range(x_arr.size-1):
+    m = 0    
+    new_cluster = [m]
+    
+    # Pass through the list of events    
+    for n in range(1, x_arr.size):
         
         # Check: is the time within the time thresh?
         # NOTE: this will keep going until it finds a timepoint pair 
         # within the thresh. 
-        # _If_ there's an open cluster, that cluster will get closed
+        # If there's an open cluster, that cluster will get closed
         # at the last added point once no new points can be added 
         # based on the distance criteria. 
         # This can allow already for some long-duration clusters
         # as long as they don't exceed the distance threshold.
-        if abs(t_arr[n+1] - t_arr[n]) <= t_thresh:
-            new_x = x_arr[n+1].reshape(1,)
-        else: 
-            #n+=1
+        if abs(t_arr[n] - t_arr[n-1]) > t_thresh:
             continue
+        elif n == x_arr.size-1:
+            # This ensures that will keep the last event
+            pass
         
-        # Get the current cluster mean
-        cluster_mean = np.mean(x_arr[m:n+1])
+        # Get the last event's location
+        if n < x_arr.size-1:
+            new_x = x_arr[n].reshape(1,)
+        else:
+            new_x = x_arr[n-1].reshape(1,)
+            
+        # Get the current cluster's mean
+        cluster_mean = np.mean(x_arr[m:n])
 
-        # Get the potential cluster mean    
+        # Get the potential cluster's mean    
         new_cluster_mean = np.mean(\
-            np.concatenate([x_arr[m:n+1],new_x])\
+            np.concatenate([x_arr[m:n],new_x])\
                 )        
 
         err1 = get_err(cluster_mean, new_x)
         err2 = get_err(cluster_mean, new_cluster_mean)
         
-        #if verbose: print(f"{n:5d}, {err1:6.3f}, {err2:6.3f}")
- 
+        #if verbose: print(f"{m:5d}, {n:5d}, {err1:6.3f}, {err2:6.3f}")
+        
         # Checks: 
         # 1. new event is within dist. thresh of current clust.
         # 2. new mean - current mean is within dist. thresh.
-        txt = f'Try {n:4d}: '
-        app = ""
-        if  (err1 < d_thresh) & (err2 < d_thresh):
-            #if verbose: print("append")
-            new_cluster.append(n)
+        if  ((err1 < d_thresh) & (err2 < d_thresh)) & (n < x_arr.size):
+            new_cluster.append(n)        
         else:
             # Save the current cluster and prepare restart
-            app = "breaking"
             if (len(new_cluster) >= 2):
                 # Since this is an incomplete method (clusters will be merged after), 
                 # can keep this; otherwise, would lose small clusters
                 #if (abs(t_arr[new_cluster[-1]]-t_arr[new_cluster[0]]) > t_thresh):
                 clusters.append(new_cluster)
-                app = 'closing'
-            #if verbose: print(txt+app)
-            new_cluster = []
+                if verbose: print(f"\tAppended: [{new_cluster[0]:4d}, {new_cluster[-1]:4d}]")
 
-            # Check whether the new cluster is can be merged with the previous one
-            # NOTE: this combines the logic from `merge_clusters` function
-            if len(clusters) > 1:
-                clusters = check_and_merge_clusters(clusters)
-            
-            # Update starting point (TODO: n or n+1?)
+                # Check whether the new cluster is can be merged with the previous one
+                # NOTE: this combines the logic from `merge_clusters` function
+                if len(clusters) > 1:
+                    clusters = check_and_merge_clusters(clusters)
+                    if (clusters[-1][0] != new_cluster[0]) & verbose:
+                        print("\t\tMerged")
+                        
+            # Update starting point 
+            # TODO: n or n+1?
             m=n
-    
-    # Since the last part of the trajectory array is possibly skipped,
-    # need to close last potential cluster    
-    m = clusters[-1][-1]
-    n = m+1
-    print("0", len(new_cluster), m, n, x_arr.size)
-        
-    if (len(new_cluster) > 0):
-
-        m = new_cluster[0]
-        n = new_cluster[-1]
             
-        while n < x_arr.size: 
+            # TODO: start with m?
+            new_cluster = [m]
             
-            print("0.11", m, n, len(new_cluster))
-            
-            
-            # Get the current cluster mean
-            cluster_mean = np.mean(x_arr[m:n+1])
-
-            # Get the potential cluster mean    
-            '''
-            new_x = x_arr[n+1].reshape(1,)            
-            new_cluster_mean = np.mean(\
-                np.concatenate([x_arr[m:n+1],new_x])\
-                    )
-            '''
-            new_cluster_mean = np.mean(x_arr[m:n+1])
-            
-            err1 = get_err(cluster_mean, new_x)
-            err2 = get_err(cluster_mean, new_cluster_mean)    
-            
-            if len(new_cluster) != 0:
-                txt = f'Try {n:4d}: '
-                app = ""
-                if  (err1 < d_thresh) & (err2 < d_thresh):
-                    #if verbose: print("append")
-                    new_cluster.append(n)
-                else:
-                    # Save the current cluster and prepare restart
-                    app = "breaking"
-                    if (len(new_cluster) >= 2):
-                        # Since this is an incomplete method (clusters will be merged after), 
-                        # can keep this; otherwise, would lose small clusters
-                        #if (abs(t_arr[new_cluster[-1]]-t_arr[new_cluster[0]]) > t_thresh):
-                        clusters.append(new_cluster)
-                        app = 'closing'
-                        
-                        # Check whether the new cluster is can be merged with the previous one
-                        clusters = check_and_merge_clusters(clusters)
-
-                        # Update starting point (TODO: n or n+1?)
-                        m=n
-
-                #if verbose: print(txt, f"err1 = {err1:6.3f}, err2 = {err2:6.3f}", app)
-                n+=1 
-            if verbose: print(txt, f"err1 = {err1:6.3f}, err2 = {err2:6.3f}", app)
-            
-    elif (m < x_arr.size-1):
-            
-        new_cluster = [m]
-        
-        n = m+1
-        
-        while n < x_arr.size-1: 
-            
-            # Check: is the time within the time thresh?
-            if abs(t_arr[n+1] - t_arr[n]) <= t_thresh:
-                new_x = x_arr[n+1]
-            else: 
-                n+=1
-                continue
-
-            print("0.1", m, n, len(new_cluster))
-
-            # Get the current cluster mean
-            cluster_mean = np.mean(x_arr[m:n+1])
-
-            # Get the potential cluster mean    
-            new_cluster_mean = np.mean(x_arr[m:n+1])
-
-            err1 = get_err(cluster_mean, new_x)
-            err2 = get_err(cluster_mean, new_cluster_mean)    
-
-            if len(new_cluster) != 0:
-                txt = f'Try {n:4d}: '
-                app = ""
-                if  (err1 < d_thresh) & (err2 < d_thresh):
-                    if verbose: print("append")
-                    new_cluster.append(n)
-                else:
-                    # Save the current cluster and prepare restart
-                    app = "breaking"
-                    if (len(new_cluster) >= 2):
-                        # Since this is an incomplete method (clusters will be merged after), 
-                        # can keep this; otherwise, would lose small clusters
-                        #if (abs(t_arr[new_cluster[-1]]-t_arr[new_cluster[0]]) > t_thresh):
-                        clusters.append(new_cluster)
-                        app = 'closing'
-                        
-                        m = n
-                        # Check whether the new cluster is can be merged with the previous one
-                        clusters = check_and_merge_clusters(clusters)
-            else:
-                print("Empty")
-            if verbose: print(txt, f"err1 = {err1:6.3f}, err2 = {err2:6.3f}", app)                
-
-            n+=1
-        print("1",len(new_cluster))
-    else:
-        pass
-    
-    print("2:",len(new_cluster))
-    
-    # If there's an open cluster, add it to the list of clusters
-    if len(new_cluster) > 0:
-        clusters.append(new_cluster)   
-
-        # and check and merge it
-        clusters = check_and_merge_clusters(clusters)
-    
-    
-    if x_arr.size-1 not in clusters[-1]:
-        if verbose: print(f"{x_arr.size:4d} is not in: [{clusters[-1][0]:4d},{clusters[-1][-1]:4d}]" )
-    else:
-        if verbose: print("Done")
+        # If there is an open cluster and the limit is reached, append it.
+        if (n == x_arr.size-1) & (len(new_cluster) > 0):
+            clusters.append(new_cluster)
+            if verbose: print(f"\tAppending: [{new_cluster[0]:4d}, {new_cluster[-1]:4d}]")
+            # and check and merge it
+            clusters = check_and_merge_clusters(clusters)
+            if (clusters[-1][0] != new_cluster[0]) & verbose:
+                print("\t\tMerged")
+            new_cluster = []
             
     return clusters
 
@@ -596,3 +483,17 @@ def get_clusters_4(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
 
 
 subcluster_lengths = lambda cluster_list: [len(c) for c in cluster_list]
+
+'''
+Debugging output for get_clusters_3, near the end:
+    # Since the last part of the trajectory array is possibly skipped,
+    # need to close last potential cluster    
+    print(f"Checking last cluster: [{clusters[-1][0]:4d}, {clusters[-1][-1]:4d}],",\
+          f"{clusters[-1][-1]:4d} < {x_arr.size-1:4d}: {clusters[-1][-1]<x_arr.size-1}")
+    
+    indices = ""
+    if len(new_cluster) > 0:
+        indices = f"[{new_cluster[0]:4d}, {new_cluster[-1]:4d}], ",\
+                  f"{clusters[-1][-1]:4d} < {x_arr.size-1:4d}: {clusters[-1][-1]<x_arr.size-1}"
+    print(f"Checking for open cluster: {len(new_cluster):4d} > 0: {len(new_cluster)>0}" + indices)
+'''
