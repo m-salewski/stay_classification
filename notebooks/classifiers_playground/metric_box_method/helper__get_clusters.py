@@ -256,7 +256,8 @@ def get_clusters_3(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
     #for n in range(0,x_arr.size-3):
     # Initialize working indices
     m, n = 0, 0
-    while n < x_arr.size-2:
+    #while n < x_arr.size-2:
+    for n in range(x_arr.size-1):
         
         # Check: is the time within the time thresh?
         # NOTE: this will keep going until it finds a timepoint pair 
@@ -269,9 +270,9 @@ def get_clusters_3(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
         if abs(t_arr[n+1] - t_arr[n]) <= t_thresh:
             new_x = x_arr[n+1].reshape(1,)
         else: 
-            n+=1
+            #n+=1
             continue
-
+        
         # Get the current cluster mean
         cluster_mean = np.mean(x_arr[m:n+1])
 
@@ -312,9 +313,6 @@ def get_clusters_3(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
             
             # Update starting point (TODO: n or n+1?)
             m=n
-                    
-        #if verbose: print(txt, f"err1 = {err1:6.3f}, err2 = {err2:6.3f}", app)
-        n+=1
     
     # Since the last part of the trajectory array is possibly skipped,
     # need to close last potential cluster    
