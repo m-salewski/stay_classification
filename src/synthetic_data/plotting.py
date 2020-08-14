@@ -79,6 +79,38 @@ def plot_trajectory(t_arr, x_arr, nx_arr, t_segs, x_segs, eps):
 
     return ax
 
+def add_plot_trajectory(t_arr, x_arr, nx_arr, t_segs, x_segs, eps, ax):
+    
+    if (t_segs is not None) & (x_segs is not None):
+        ax.plot(t_segs, x_segs, **segs_plot_kwargs, label='adjusted raw stays')
+        ymin = min([x for x in x_segs.tolist() if x != None])-1*eps
+        ymax = max([x for x in x_segs.tolist() if x != None])+1*eps         
+    
+    if (t_arr is not None) & (x_arr is not None):
+        ax.plot(t_arr, x_arr, ':', color='C0', label='raw journey')
+        ymin = x_arr.min()-1*eps
+        ymax = x_arr.max()+1*eps
+    
+    if (t_arr is not None) & (nx_arr is not None):
+        ax.plot(t_arr, nx_arr, '.-', color='C1', label='noisy journey', alpha=0.25)
+        ymin = nx_arr.min()-1*eps
+        ymax = nx_arr.max()+1*eps        
+
+    ax.legend();
+
+    ax.set_xlabel(r'time, $t$ [arb.]')
+    ax.set_ylabel(r'position, $x$ [arb.]')
+
+    ax.xaxis.set_major_locator(MultipleLocator(1))
+    ax.xaxis.set_minor_locator(MultipleLocator(0.5))
+
+    ax.set_xlim(-0.05, 24.05)
+
+    ax.set_title('Trajectory', fontsize=24)
+    ax.grid(visible=True); 
+
+    return None
+
 
 def add_plot_seg_boxes(t_segs, x_segs, dist_thresh, ax):
     

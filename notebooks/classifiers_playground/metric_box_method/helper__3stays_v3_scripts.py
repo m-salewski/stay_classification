@@ -609,7 +609,8 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
     for c in clusters:
 
         # Get cluster
-        if verbose: print(f"Cluster #{i}\n\tlength: {len(c)},  ",\
+        if verbose: print(f"Cluster #{i+1}\n\t",\
+            f"indices: [{c[0]:4d}, {c[-1]:4d}], length: {len(c)}, ",\
             f"bounds: [{x_arr[c].min():6.3f}, {x_arr[c].max():6.3f}], ",\
             f"x-width: {abs(x_arr[c].max()-x_arr[c].min()):6.3f}")
         
@@ -622,9 +623,12 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
 
         ext_clust_bwd = np.array([])
 
+        # Get proposed index
         work_ind = get_time_ind(t_arr, t_arr[c[0]], 2*time_thresh, -1)
+        # Get previous   index
         prev_work_ind = c[0]
-        if verbose: print(f"\t1.1. [{c[0]:4d}, {c[-1]:4d}], new: {work_ind:4d}, last: {prev_work_ind:4d}") 
+        if verbose: print(f"\t1.1. [{work_ind:4d}, {c[-1]+1:4d}], " + \
+                          f"new: {work_ind:4d}, last: {prev_work_ind:4d}") 
         
         keep_going = True
         while keep_going:
@@ -635,20 +639,21 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
             #if verbose: print("\t2. clust size:", cc.size)
             if len(cc) < 1:
                 break
-            if verbose: print(f"\t1.2. [{cc[0]:4d}, {cc[-1]:4d}], ",\
-            f" new: {work_ind:4d}, last: {prev_work_ind:4d}") 
+            if verbose: print(f"\t1.2. [{cc[0]:4d}, {cc[-1]:4d}], " + \
+                              f"new: {work_ind:4d}, last: {prev_work_ind:4d}") 
 
             ext_clust_bwd = cc.copy()
             
             if cc[0] != prev_work_ind:
-                if verbose: print(f"\t\tnot equal: {cc[0]:4d} \= {prev_work_ind:4d}")
+                if verbose: print(f"\t\tnot equal: {cc[0]:4d} =/= {prev_work_ind:4d}")
                 prev_work_ind = cc[0]
             else:
                 break
             work_ind = get_time_ind(t_arr, t_arr[prev_work_ind], 2*time_thresh, -1)
             
         if ext_clust_bwd.size > 1:
-            if verbose: print(f"\t1.3. [{ext_clust_bwd[0]}, {ext_clust_bwd[-1]}], {work_ind}")
+            if verbose: print(f"\t1.3. [{ext_clust_bwd[0]:4d}, {ext_clust_bwd[-1]:4d}], " + \
+                              f"new: {work_ind:4d}, last: {prev_work_ind:4d}")
 
         if len(cc) > 1:   
             if cc[-1]!=prev_work_ind:
@@ -661,8 +666,8 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
 
         work_ind = get_time_ind(t_arr,t_arr[c[-1]], 2*time_thresh, 1)
         prev_work_ind = c[-1]
-        if verbose: print(f"\t2.1. [{c[0]:4d},{c[-1]:4d}], " \
-            f" new: {work_ind:4d}, last: {prev_work_ind:4d}") 
+        if verbose: print(f"\t2.1. [{c[0]:4d},{c[-1]:4d}], " + \
+            f"new: {work_ind:4d}, last: {prev_work_ind:4d}") 
 
         ext_clust_fwd = np.array([])
 
@@ -676,46 +681,50 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
             #if verbose: print("\t2. clust size:", cc.size)
             if len(cc) < 1:
                 break
-            if verbose: print(f"\t2.2. [{cc[0]:4d},{cc[-1]:4d}], ",\
-            f" new: {work_ind:4d}, last: {prev_work_ind:4d}") 
+            if verbose: print(f"\t2.2. [{cc[0]:4d},{cc[-1]:4d}], " + \
+                              f"new: {work_ind:4d}, last: {prev_work_ind:4d}") 
      
 
             if cc[-1] != prev_work_ind:
-                if verbose: print(f"\t\tnot equal: {cc[-1]:4d} \= {prev_work_ind:4d}")
+                if verbose: print(f"\t\tnot equal: {cc[-1]:4d} =/= {prev_work_ind:4d}")
                 prev_work_ind = cc[-1]
             else:
                 break
 
             work_ind = get_time_ind(t_arr, t_arr[prev_work_ind], 2*time_thresh, 1)
 
+        # Finalization
         new_clust = []
         
         if (ext_clust_bwd.size > 0) and (ext_clust_fwd.size > 0):
             ext_clust_fwd = np.concatenate([ ext_clust_bwd.reshape(-1,), ext_clust_fwd.reshape(-1,)])
-            final_report = f"\nFinal clust: length = {ext_clust_fwd.size:4d};"\
-                           f" range = [{ext_clust_fwd[0]:4d},{ext_clust_fwd[-1]:4d}]"\
+            new_clust = np.unique(ext_clust_fwd)            
+
+            final_report = f"\nFinal clust: length = {new_clust.size:4d};"\
+                           f" range = [{new_clust[0]:4d},{new_clust[-1]:4d}];"\
                            f" working index = {work_ind:4d};"
             dropped = ""
-            new_clust = np.unique(ext_clust_fwd).tolist()
+            new_clust = new_clust.tolist()
+    
         else:
-            final_report = f"\nFinal clust: length = {ext_clust_bwd.size:4d}; "\
-            f"  length = {ext_clust_fwd.size:4d}"
-            dropped = "1Dropped: "
+            final_report = f"\n\tFinal clust: length = {ext_clust_fwd.size:4d}"
+            dropped = "(1)Dropped: "
 
         duration = 0
         if (len(new_clust) > 0):
             duration = abs(t_arr[new_clust[-1]]-t_arr[new_clust[0]])
-
+        
+        final_report += f" duration = {duration:6.3f}\n"
+        
         if (len(new_clust) > 0) and (duration > time_thresh):
-            final_report += f" duration = {duration:6.3f}\n"
             new_clusts.append(new_clust)
         else:
-            final_report += f" duration = {duration:6.3f}\n"
-            dropped = "2Dropped: "
+            dropped = f"(2)Dropped: "#{len(new_clust) > 0):4d} or duration > time_thresh = {duration > time_thresh}"
 
         if verbose: print(dropped+final_report)            
         
         i += 1
+        #print()
 
     return new_clusts
 

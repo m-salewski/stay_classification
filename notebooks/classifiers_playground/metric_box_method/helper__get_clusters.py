@@ -111,7 +111,7 @@ def get_clusters_2(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
     """
     
     get_err = lambda x1, x2: abs(x1-x2) #np.sqrt((x1-x2)**2)
-    
+    testdata_20200814/trajectory_3stays__prec0o949_rec0o597.pkl
     # Output list of indices: [[beg., end],[beg., end], ...] 
     clusters = []
 
@@ -265,7 +265,10 @@ def get_clusters_3(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
         # This can allow already for some long-duration clusters
         # as long as they don't exceed the distance threshold.
         if abs(t_arr[n] - t_arr[n-1]) > t_thresh:
-            continue
+            if n >= x_arr.size-1:
+                pass
+            else:
+                continue
         elif n == x_arr.size-1:
             # This ensures that will keep the last event
             pass
@@ -318,13 +321,14 @@ def get_clusters_3(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
             new_cluster = [m]
             
         # If there is an open cluster and the limit is reached, append it.
-        if (n == x_arr.size-1) & (len(new_cluster) > 0):
+        if verbose: print(n, len(new_cluster))
+        if (n >= x_arr.size-2) & (len(new_cluster) > 0):
             clusters.append(new_cluster)
-            if verbose: print(f"\tAppending: [{new_cluster[0]:4d}, {new_cluster[-1]:4d}]")
+            if verbose: print(f"\tFinal append: [{new_cluster[0]:4d}, {new_cluster[-1]:4d}]")
             # and check and merge it
             clusters = check_and_merge_clusters(clusters)
             if (clusters[-1][0] != new_cluster[0]) & verbose:
-                print("\t\tMerged")
+                print("\t\tFinal merge")
             new_cluster = []
             
     return clusters

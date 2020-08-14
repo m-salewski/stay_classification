@@ -34,6 +34,7 @@ def merge_cluster_pair(clusters, gap_index):
     new_clusters.extend(clusters[:gap_index])
     
     new_clusters.append(list(range(clusters[gap_index][0],clusters[gap_index+1][-1]+1)))
+
     
     new_clusters.extend(clusters[gap_index+2:])
     
