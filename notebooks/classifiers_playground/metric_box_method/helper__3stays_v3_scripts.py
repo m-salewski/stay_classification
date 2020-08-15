@@ -504,7 +504,7 @@ def get_iqr_mask_x(sub_arr, offset, iqr_bounds, iqr_fact = 1.5, within=True, ver
     
     # Mask to include only events within the IQR
     if iqr_bounds != None:
-        if verbose: print(iqr_bounds)
+        #if verbose: print("Getting input bounds", iqr_bounds)
         q25, q75 = iqr_bounds
     else:
         q25, q75 = _get_iqr(sub_arr)
@@ -512,10 +512,10 @@ def get_iqr_mask_x(sub_arr, offset, iqr_bounds, iqr_fact = 1.5, within=True, ver
     iqr = abs(q75 - q25)
         
     if within:
-        mask = np.where((sub_arr > (q25 - iqr_fact * iqr)) & (sub_arr < (q75 + iqr_fact * iqr)))
+        mask = np.where((sub_arr >= (q25 - iqr_fact * iqr)) & (sub_arr <= (q75 + iqr_fact * iqr)))
         
     else:
-        mask =  np.where((sub_arr <= (q25 - iqr_fact * iqr)) | (sub_arr >= (q75 + iqr_fact * iqr)))
+        mask =  np.where((sub_arr < (q25 - iqr_fact * iqr)) | (sub_arr > (q75 + iqr_fact * iqr)))
     
     mask[0][:] += offset
     
@@ -600,6 +600,53 @@ def get_no_overlap(t_arr, clusters):
     return final_clusters
 
 
+def get_time_ind(t_arr, index, time_thresh, direction, verbose=False):
+    """
+    Get the index of a region bounded by a timepoint +/- a buff
+
+    :param t_arr: np.array Trajectory array of timepoints
+    :param timepoint: float Timepoint
+    :param time_thresh: float buff around timepoint  
+    :param direction: int gets the min or max index of a region
+    
+    :return: int endpoint index of a region
+    
+    """
+    
+    timepoint = t_arr[index]
+    
+    indices = np.array([[]])
+    n = 1
+
+    within_limits = True
+    while ((within_limits) & (indices[0].size == 0)):
+        
+        indices = get_directional_indices(t_arr, timepoint, n*time_thresh, direction)
+        
+        # Ensure the moving edge is within the time array
+        if direction > 0:
+            within_limits = timepoint + direction*n*time_thresh <= t_arr.max()
+        else:
+            within_limits = timepoint + direction*n*time_thresh >= t_arr.min()
+       
+        n+=1
+
+    # if there are indices, get the min/max per direction
+    if indices[0].size != 0:
+        #if verbose: print("\t\tget_time_ind",indices[0].max(), indices[0].min())
+        if direction == 1:
+            return indices[0].max() 
+        else: 
+            return indices[0].min()
+    else:
+        #If size == 0 ==> while exited due to limits
+        #if verbose: print("\t\tget_time_ind", "min", "max")
+        if direction == 1:
+            return t_arr.shape[0]-1
+        else: 
+            return 0
+
+
 def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
     """
     """
@@ -608,23 +655,33 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
     i = 0 
     for c in clusters:
 
+        cc = get_iqr_mask_x(x_arr[c], c[0], (x_arr[c].min(), x_arr[c].max()), 0, True, verbose)[0]
+        
         # Get cluster
-        if verbose: print(f"Cluster #{i+1}\n\t",\
+        if verbose: 
+            
+            if cc.size > 0:
+                iqr_str = f"IQR: [{cc.min():4d}, {cc.max():4d}]"
+            else:
+                iqr_str = f"IQR: [ nan,  nan]"            
+            
+            print(f"Cluster #{i+1}\n\t",\
             f"indices: [{c[0]:4d}, {c[-1]:4d}], length: {len(c)}, ",\
             f"bounds: [{x_arr[c].min():6.3f}, {x_arr[c].max():6.3f}], ",\
-            f"x-width: {abs(x_arr[c].max()-x_arr[c].min()):6.3f}")
+            f"x-width: {abs(x_arr[c].max()-x_arr[c].min()):6.3f}",\
+            f"{iqr_str}")
         
         # If cluster is too small, ignore it
         if len(c) < 2:
             continue
 
         # extend clust backwards w.r.t. time
-        if verbose: print("Backwards")
+        if verbose: print("    Backwards")
 
         ext_clust_bwd = np.array([])
 
         # Get proposed index
-        work_ind = get_time_ind(t_arr, t_arr[c[0]], 2*time_thresh, -1)
+        work_ind = get_time_ind(t_arr, c[0], 2*time_thresh, -1, verbose)
         # Get previous   index
         prev_work_ind = c[0]
         if verbose: print(f"\t1.1. [{work_ind:4d}, {c[-1]+1:4d}], " + \
@@ -633,23 +690,27 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
         keep_going = True
         while keep_going:
 
-            # Get the indices for the ext box
+            # Get the indices for the extended box
             cc = get_iqr_mask_x(x_arr[work_ind:c[-1]+1], work_ind, (x_arr[c].min(), x_arr[c].max()), 0, True)[0]
+            ext_clust_bwd = cc.copy()
             
             #if verbose: print("\t2. clust size:", cc.size)
             if len(cc) < 1:
+                if verbose: print("\tlength break")
+                
                 break
+            
             if verbose: print(f"\t1.2. [{cc[0]:4d}, {cc[-1]:4d}], " + \
                               f"new: {work_ind:4d}, last: {prev_work_ind:4d}") 
 
-            ext_clust_bwd = cc.copy()
             
             if cc[0] != prev_work_ind:
                 if verbose: print(f"\t\tnot equal: {cc[0]:4d} =/= {prev_work_ind:4d}")
                 prev_work_ind = cc[0]
             else:
+                if verbose: print("\tno change break")                
                 break
-            work_ind = get_time_ind(t_arr, t_arr[prev_work_ind], 2*time_thresh, -1)
+            work_ind = get_time_ind(t_arr, prev_work_ind, 2*time_thresh, -1, verbose)
             
         if ext_clust_bwd.size > 1:
             if verbose: print(f"\t1.3. [{ext_clust_bwd[0]:4d}, {ext_clust_bwd[-1]:4d}], " + \
@@ -658,13 +719,13 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
         if len(cc) > 1:   
             if cc[-1]!=prev_work_ind:
                 prev_work_ind = cc[-1]
-        work_ind = get_time_ind(t_arr,t_arr[work_ind], 2*time_thresh, 1)
+        work_ind = get_time_ind(t_arr, work_ind, 2*time_thresh, 1)
 
 
         # extend clust forwards w.r.t. time
-        if verbose: print("Forwards")
+        if verbose: print("    Forwards")
 
-        work_ind = get_time_ind(t_arr,t_arr[c[-1]], 2*time_thresh, 1)
+        work_ind = get_time_ind(t_arr, c[-1], 2*time_thresh, 1, verbose)
         prev_work_ind = c[-1]
         if verbose: print(f"\t2.1. [{c[0]:4d},{c[-1]:4d}], " + \
             f"new: {work_ind:4d}, last: {prev_work_ind:4d}") 
@@ -680,6 +741,7 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
             
             #if verbose: print("\t2. clust size:", cc.size)
             if len(cc) < 1:
+                if verbose: print("\tlength break")
                 break
             if verbose: print(f"\t2.2. [{cc[0]:4d},{cc[-1]:4d}], " + \
                               f"new: {work_ind:4d}, last: {prev_work_ind:4d}") 
@@ -689,12 +751,15 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
                 if verbose: print(f"\t\tnot equal: {cc[-1]:4d} =/= {prev_work_ind:4d}")
                 prev_work_ind = cc[-1]
             else:
+                if verbose: print("\tno change break")
                 break
 
-            work_ind = get_time_ind(t_arr, t_arr[prev_work_ind], 2*time_thresh, 1)
+            work_ind = get_time_ind(t_arr, prev_work_ind, 2*time_thresh, 1, verbose)
 
         # Finalization
         new_clust = []
+        
+        if verbose: print("sizes:", ext_clust_bwd.size, ext_clust_fwd.size)
         
         if (ext_clust_bwd.size > 0) and (ext_clust_fwd.size > 0):
             ext_clust_fwd = np.concatenate([ ext_clust_bwd.reshape(-1,), ext_clust_fwd.reshape(-1,)])
@@ -709,12 +774,14 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
         else:
             final_report = f"\n\tFinal clust: length = {ext_clust_fwd.size:4d}"
             dropped = "(1)Dropped: "
-
+            
         duration = 0
         if (len(new_clust) > 0):
             duration = abs(t_arr[new_clust[-1]]-t_arr[new_clust[0]])
+            final_report += "-duration-"
         
         final_report += f" duration = {duration:6.3f}\n"
+        
         
         if (len(new_clust) > 0) and (duration > time_thresh):
             new_clusts.append(new_clust)
