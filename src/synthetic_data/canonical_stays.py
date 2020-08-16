@@ -47,7 +47,7 @@ def get2(x_shift=0, x_dist=1.0):
     
     x_locs = [x_midpt_1, x_midpt_2]
     
-    t_dist = abs(12 - get_t(12, x_locs[0], 0, mind_speed))
+    t_dist = abs(12 - get_t_fro(12, x_locs[0], 0, mind_speed))
     t_bounds = [ 6, 
                 12-x_shift-t_dist, 
                 12-x_shift+t_dist,

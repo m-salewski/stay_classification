@@ -759,7 +759,7 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
         # Finalization
         new_clust = []
         
-        if verbose: print("sizes:", ext_clust_bwd.size, ext_clust_fwd.size)
+        #if verbose: print("sizes:", ext_clust_bwd.size, ext_clust_fwd.size)
         
         if (ext_clust_bwd.size > 0) and (ext_clust_fwd.size > 0):
             ext_clust_fwd = np.concatenate([ ext_clust_bwd.reshape(-1,), ext_clust_fwd.reshape(-1,)])
@@ -777,9 +777,7 @@ def get_extended_clusters(t_arr, x_arr, clusters, time_thresh, verbose=False):
             
         duration = 0
         if (len(new_clust) > 0):
-            duration = abs(t_arr[new_clust[-1]]-t_arr[new_clust[0]])
-            final_report += "-duration-"
-        
+            duration = abs(t_arr[new_clust[-1]]-t_arr[new_clust[0]])        
         final_report += f" duration = {duration:6.3f}\n"
         
         
