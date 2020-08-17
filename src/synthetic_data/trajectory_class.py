@@ -27,9 +27,9 @@ def get_time_bounds(nr_stays, time_thresh, m2m_flags=[True,True]):
         # TODO: adjust this so that the end points can also start/end at 00:00/23:59 independently
         t_bounds = rand_range(0,24,2*nr_stays)
         if m2m_flags[0]:
-            t_bounds = np.concatenate((np.array([0]),t_bounds))
+            t_bounds = np.concatenate((np.array([0]),t_bounds[1:]))
         if m2m_flags[1]:
-            t_bounds = np.concatenate((t_bounds,np.array([24])))
+            t_bounds = np.concatenate((t_bounds[:-1],np.array([24])))
 
             
         #t_bounds = np.concatenate((np.array([0,24]),rand_range(0,24,2*nr_stays)))
@@ -52,9 +52,11 @@ def get_xlocs(min_, max_, size, dist_thresh):
         
     return xlocs
 
+get_slope = lambda t1,x1,t2,x2: (x1-x2)/(t1-t2)
+get_t_to  = lambda t1, x1, x2 ,m : np.sign(x2-x1)*(x2 - x1)/m + t1
+get_t_fro = lambda t2, x1, x2 ,m : np.sign(x2-x1)*(x1 - x2)/m + t2
 
-def get_rand_stays(configs, nr_stays=None):
-    
+def get_rand_stays(configs, nr_stays=None):      
     """ 
     Creates a random set of stays.
 
@@ -74,8 +76,13 @@ def get_rand_stays(configs, nr_stays=None):
     p,_ = np.histogram(np.random.lognormal(1.2,0.60,500),bins=np.arange(0,30,1), density=True)
     if nr_stays == None:
         nr_stays = np.random.choice(np.arange(p.size),size=1,p=p)[0]
+    
     # flags to select whether the trajectory begins and ends on midnights
-    m2m_flags = np.random.choice(np.arange(p.size),size=2,p=p)[0:2]%5 > 0
+    # Originally: m2m_flags = np.random.choice(np.arange(p.size),size=2,p=p)[0:2]%5 > 0
+    if p.size > 2: 
+        m2m_flags = np.random.choice(np.arange(p.size),size=2,p=p)[0:2]%5 > 0
+    else:
+        m2m_flags = np.random.choice(np.arange(2),size=2)[0:2]%2 > 0
     
     # Create the ordered timepoints for the stays
     #TODO: give the time thresh as a param
@@ -83,7 +90,7 @@ def get_rand_stays(configs, nr_stays=None):
     
     # Create the sptaial locations for the stays 
     #TODO: these should be specified in a config-file
-    xlocs = get_xlocs(-2.0, 2.0, int(len(t_bounds)/2), configs['dist_thresh'])
+    xlocs = get_xlocs(-5.0, 5.0, int(len(t_bounds)/2), configs['dist_thresh'])
     endpoints_flag = np.random.choice(np.arange(p.size),size=1,p=p)[0]%3
     if nr_stays <= 2:
         endpoints_flag = 2
@@ -94,15 +101,41 @@ def get_rand_stays(configs, nr_stays=None):
     else:
         pass
     
+    # Adjust the t-bounds to account for at least minimal walking speeds
+    #TODO: make this configurable in speeds and turning off/on    
+    min_speed = 3.6
+    min_speed = rand_range(min_speed, 3*min_speed, 1)
+    
+    x_locs = []
+    for xx in xlocs:
+        x_locs.append(xx)
+        x_locs.append(xx)
+    
+    for n in range(0,len(t_bounds)-2,2):
+        
+        m = get_slope(t_bounds[n+1], x_locs[n+1], t_bounds[n+2], x_locs[n+2])
+        
+        if abs(m) < 3.6:
+            
+            mid_t = (t_bounds[n+1] + t_bounds[n+2])/2.0
+            mid_x = (x_locs[n+1] + x_locs[n+2])/2.0
+
+            new_t1 = get_t_fro(mid_t, x_locs[n+1], mid_x, min_speed)
+            new_t2  = get_t_to(mid_t, mid_x, x_locs[n+2], min_speed)            
+
+            t_bounds[n+1] = new_t1
+            t_bounds[n+2] = new_t2      
+
+    
     # From the new times and locs, generate the stays
     #TODO: if checking against the proposed number of stays,
     #      apply the check above.
     stays = []
-    for n in range(int(len(t_bounds)/2)):
-        nn = 2*n
-        stay = get_stay(t_bounds[nn], t_bounds[nn+1], xlocs[n])
-        stays.append(stay)    
-
+    for n in range(0,len(t_bounds)-1,2):
+        #nn = 2*n
+        stay = get_stay(t_bounds[n], t_bounds[n+1], x_locs[n+1])
+        stays.append(stay) 
+        
     return stays
 
 

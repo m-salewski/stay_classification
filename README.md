@@ -145,5 +145,8 @@ There are a few different modules included here:
     * sequences can be specified, with locations and endpoints of stays
     * sequences can be randomly specified
     * batches of sequences are also possible to test any new methods on many examples
+    * canonical sequences, 
+        * _ie_ minimal subsequences which exhibit the main challenges, 
+        * useful for quick testing and fault identification
 * `box_method`: a module which includes an implementation of the above described box method
 

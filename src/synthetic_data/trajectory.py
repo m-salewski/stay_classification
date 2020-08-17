@@ -339,7 +339,10 @@ def get_adjusted_stays(segs, t_arr):
     for seg in segs:
 
         type_, loc_, start_, stop_ ,_ = get_seg_info(seg) 
-
+        
+        ####NOTE: seems to be a bug here:
+        #### `--> 348             new_t0, new_t1 = np.min(subarr),np.max(subarr)`
+        #### `ValueError: zero-size array to reduction operation minimum which has no identity`
         ####TODO: generalize to any seg, since the travels are also affected.
         if  type_ == 'stay':
             subarr = t_arr[np.where((t_arr >= start_) & \

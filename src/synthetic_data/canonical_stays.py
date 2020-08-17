@@ -19,6 +19,32 @@ def gen_stays(t_bounds, x_locs):
     return stays
 
 
+def get_rand_canonical_stays(configs=None):
+    
+    if configs == None:
+        rand_range = lambda min_, max_, size: (max_-min_)*np.random.random_sample(size=size) + min_
+
+        event_frac = rand_range(0.01,0.001, 1)[0]
+        duplicate_frac = 0.30 #rand_range(1,0.3,0.05)[0]
+
+        configs = {
+            'time_thresh':1/6,
+            'dist_thresh':0.5,
+            'event_frac':event_frac,
+            'duplicate_frac':duplicate_frac,    
+            'noise_min':0.02,
+            'noise_max':0.15
+        }
+
+    x_dist = rand_range(0.52,5.0, 10)[0]    
+    x_dist = (-1)**np.random.randint(0,2,1)*x_dist
+    
+    mid_len = rand_range(0.2, 8, 10)[0]
+    shift = rand_range(-5, 5, 21)[0]
+    
+    return configs, x_dist, mid_len, shift
+
+
 def get1():
 
     # 1 stay
