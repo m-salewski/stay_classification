@@ -2,21 +2,30 @@
 
 ## Algorithm
 
-### Summary
+1. `get_clusters_3`
+    1. initial clustering and merging
+        1. initial pass
+            1. confine the errors and speeds up the compute.
+        2. identifies clusters based on spatio-temporal nearness
+            1. events must first be close in time $\to$ identifies many small clusters
+            2. adding a new event must be close to the statistical center of a cluster
+        3. adjacent clusters are merged when they not sufficiently separated         
+2. `get_extended_clusters`
+    1. extend the cluster "boxes" bwd/fwd to obtain limits
+3. `separate_clusters_hier`
+    1. identify and separate overlapping clusters
+4. `merge_combo`
+    1. since the above splits clusters, need to re-merge
+5. `shift_box`
+    1. in order to identify small clusters as part of travels, shift the box fwd/bwd and look for changes
+        * **TODO** apply _only_ to small enough clusters
+6. `get_iqr_trimmed_clusters`
+    1. refine the cluster limits by keeping only events which fall within the IQR of the cluster.
 
-1. `get_clusters_x` finds the clusters based on nearness of events in space and time
-    * events must first be close in time $\to$ identifies many small clusters
-    * adding a new event must be close to the statistical center of a cluster      
-2. `merge_clusters` merges neraby clusters based on ...
-    * adjacent clusters are merged when they not sufficiently separated   
-3. `merge_clusters_2`  merges neraby clusters based on ...
-4. `extend_clusters` extend the clusters
-5. `separate_clusters` break the overlapping clusters and then re-merge
-6. `merge_clusters_2` merge the separated clusters
-7. `intersect` the forward and backward clusters
 
+## Current evaluation
 
-### Notes
+### Results 
 
 Mostly, the results are good: more than 80% of the trajectories have prec and/or recall above 0.8
 
@@ -28,16 +37,44 @@ The main issue
 
 **TODO** since stay events are classified and not the accuracy of the stays, it would be useful to have a measure of the stay accuracy: _ie_ once a stay is identified, how much of that stay is correctly classified.
 
-
-
-## Current evaluation
+* 40% of chains result in some problem:
+    * not correct stays; p/rec are below 0.8
+    * leading 25% with 4 stays, 15% with 2 or fewer stays
+    * **Note** these have not all been checked to see where the main problems are
+        * missing large stays
+        
+* the rest has not been evaluated
 
 ### Pros
-* can separate sequence and identify rudimentary clusters, then these are refined with extending a box of uncertainty around these in order to correclty assess their bounds.
+* can separate sequence and identify rudimentary clusters
 
 ### Cons
-* can't distinguish stays from travels 
+* can't distinguish all stays from travels 
     * nothing created to do so.
+
+
+# Clustering
+
+## Split the clusters which have a temporal gap
+
+### IQR-plotting
+
+For each sub-cluster, plot the quantile boxes with whistkers.
+
+**Notes**
+* the boxes usually capture the baseline of the underlying stay
+* the forward and backward clusters
+    * usually the same clusters in the stays with similar IQRs
+    * usually different in the 
+
+### From here
+
+At this point, it seems that the basic clusters are formed. 
+
+Next, use the IQRs of these clusters as the new bounds for extending the cluster: essentially using the extensible box method.
+
+Note that the IQR can be larger than the allow distance threshold; the box would therefore need to be the smaller of the two but with the same mean and/or median
+
 
 ## ToDos
 
@@ -45,8 +82,8 @@ The main issue
 * check that the newly split clusters are 
     * contain enough samples
     * $\checkmark$ ~~have a total duration longer than the threshold~~ see `get_extended_clusters`
-    * $\checkmark$ ~~are not embedded within another cluster~~ possible, but unused; see `separate_embedded_clusters`
-* $\checkmark$ ~~check that there are no embedded clusters~~ see `separate_embedded_clusters`
+    * $\checkmark$ ~~are not embedded within another cluster~~ possible, but unused; see ~~`separate_embedded_clusters`~~ 
+* $\checkmark$ ~~check that there are no embedded clusters~~ see ~~`separate_embedded_clusters`~~
     * ~~times don't overlap~~ $\checkmark\to$ have function
     * ~~if refined clusters are embedded, check if one cluster is noise~~ ignored
 * check the stddev of the refined clusters are smaller
@@ -61,6 +98,9 @@ The main issue
     * **!!!** check that the identified stays during the substages are not immediately adjacent
         * _ie_ no stays should have indices like `[10, ..., 20]` followed by `[21, ..., 30]`
             * such stays are possible $\to$ but there should be a minimum travel time if the locations are distinct
+* check the gaps between (short) clusters
+    * look for limits for the length of a travel
+ 
 ## Notes: 
 
 * **Gaps** 
@@ -68,6 +108,37 @@ The main issue
 
 ### 1-stay
 * gap-merging works well when good density; poorly when otherwise
+
+### 3 clusters
+* overlapping clusters
+    * embedded and also identitcal clusters
+    * **Notes**
+        * usually have the same median and mean ("M&M"), but not always
+    * overlap on edge between two spatially close clusters
+        * maybe not sharing M&M,
+    * megacluster when two clusters share an $x$ (rare)
+        * should be avoidable with gap durations
+* missing short clusters
+    * these usually occur on the edges
+    * if using a IQR-postfilter, many of these will get dropped
+    
+### 4 clusters
+* mis-identified cluster, aka "floater"
+    * part of a travel
+        * in the canonical 3-stays, these are always between larger stays
+        * **Todo** 
+            * _check if these have insufficient events with the IQR-mask_
+            * _check if these have insufficient duration with the IQR-mask_            
+    * seems to be short in duration
+* overlapping clusters
+    * embedded and also identitcal clusters
+    * **Notes**
+        * usually have the same median and mean ("M&M"), but not always
+    * overlap on edge between two spatially close clusters
+        * maybe not sharing M&M,
+    * megacluster when two clusters share an $x$ (rare)
+        * should be avoidable with gap durations
+    * missing short clusters and overlaps/duplicates
 
 ## Future directions
 
