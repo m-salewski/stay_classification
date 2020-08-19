@@ -102,11 +102,20 @@ The algorithm is described below.
 <br/> 
 The box method illustrated on the middle stay. One box is centered around the stay, and captures most of the events. The box shows extensions which aim to capture more events; however, once all possible events are included and the central location stops changing, extending the box has no effect. Note that this is in 1D1T but it can also be applied to 2D1T, but the box becomes a cylinder of radius $\varepsilon$.
 
+## Pros and cons
+
+The box method works farily well, but as with many of these algorithms, there is a tendency to over-classify stays, since the noise generates various small clusters which satisfy the above criteria but are clearly not stays given their placement in the context of the entire sequence. 
+
+The box method reliably catches the large stays but needs several passes through the chain in order to weed out the false-stays. 
+A way to get through this is to first identify mini-clusters and merge those which are close enough to be merged. Once this is done, then the box method can be applied to the merged mini-clusters.
+One of the niceties of this approach is that the mini-clustering and merging is linear in the number of events, and the box method only then works on the clusters 
+
+
 ## Notes
 * There are similarities with hierarchical clustering methods
     * forming a cluster with a buffer of $\varepsilon$ around each event and finding which clusters intersect, and then describing new multi-event clusters by a central location
         * one problem is if the events are dense enough in time, then travels will be included as clusters
-    * it is also a variant of DBSCAN, except the temporal sequence plays a role to distinquish clusters
+    * it is also a loose variant of DBSCAN, except the temporal sequence plays a role to distinquish clusters
 
 ### The optimization problem 
 
@@ -132,7 +141,7 @@ It's countably finite, but impractical approach; itcan be a benchmark to compare
 ## The goals
 
 The goal of this project is multifold:
-1. have a method which, albeit potentially slow, optimally decomposes an event sequence into a sequence of stays
+1. have a method which, albeit potentially slow, optimally decomposes an event sequence into a sequence of stays and travels
     * _optimally_ means that given the uncertainty and statistical measures involved to determine the stay, there are no better classifications possible
 2. once above, method is established, find faster, more efficient approximations
 3. have a reference one with which to explore, compare and evaluate other methods
