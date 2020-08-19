@@ -111,7 +111,7 @@ def get_clusters_2(t_arr, x_arr, d_thresh, t_thresh, verbose=False):
     """
     
     get_err = lambda x1, x2: abs(x1-x2) #np.sqrt((x1-x2)**2)
-    testdata_20200814/trajectory_3stays__prec0o949_rec0o597.pkl
+    
     # Output list of indices: [[beg., end],[beg., end], ...] 
     clusters = []
 

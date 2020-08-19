@@ -120,8 +120,8 @@ def get_rand_stays(configs, nr_stays=None):
             mid_t = (t_bounds[n+1] + t_bounds[n+2])/2.0
             mid_x = (x_locs[n+1] + x_locs[n+2])/2.0
 
-            new_t1 = get_t_fro(mid_t, x_locs[n+1], mid_x, min_speed)
-            new_t2  = get_t_to(mid_t, mid_x, x_locs[n+2], min_speed)            
+            new_t1 = get_t_fro(mid_t, x_locs[n+1], mid_x, min_speed)[0]
+            new_t2  = get_t_to(mid_t, mid_x, x_locs[n+2], min_speed)[0]          
 
             t_bounds[n+1] = new_t1
             t_bounds[n+2] = new_t2      

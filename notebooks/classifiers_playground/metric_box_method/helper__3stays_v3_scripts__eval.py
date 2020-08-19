@@ -6,7 +6,7 @@ from sklearn.metrics import precision_score, recall_score, confusion_matrix
 from helper__3stays_v3_scripts import inter_bounds, contains, conta_bounds
 
 
-def eval_synth_data_clusters(segments, time_arr, clusters):
+def eval_synth_data_clusters(segments, time_arr, clusters, travels=False):
 
     """
     Evaluate based on individual clusters
@@ -24,7 +24,11 @@ def eval_synth_data_clusters(segments, time_arr, clusters):
 
     for pair in true_indices:
         true_labels[pair[0]:pair[1]+1] = 1
-
+    
+    # Flip to get the values for the other class
+    if travels:
+        true_labels = 1 - true_labels
+        
     # Get the predicted labels for each event
     final_pairs = []
     for clust in clusters:
@@ -34,6 +38,10 @@ def eval_synth_data_clusters(segments, time_arr, clusters):
     for pair in final_pairs:
         pred_labels[pair[0]:pair[1]+1] = 1
 
+    # Flip to get the values for the other class    
+    if travels:
+        pred_labels = 1 - pred_labels
+    
     # Evaluate using prec. and rec.    
     prec = precision_score(true_labels, pred_labels)
     rec  = recall_score(true_labels, pred_labels)
