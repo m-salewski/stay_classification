@@ -11,13 +11,15 @@ from synthetic_data.noise import get_noisy_segs, get_noisy_path, get_noise_arr
 
 rand_range = lambda min_, max_, size: (max_-min_)*np.random.random_sample(size=size) + min_
 
-'''
-TODO:
+'''TODO
 1. update all occurences of get_trajectory in NBs & scripts to include the `segments` output
+2. write glossary with the abbreviated variable names
+3. change names of all variables so that they are consistent
 '''
 
 def get_time_bounds(nr_stays, time_thresh, m2m_flags=[True,True]):
-        
+    """
+    """
     # Check that the stays aren't too short, ie above the time thresh
     keep_running = True
     while keep_running:
@@ -41,7 +43,8 @@ def get_time_bounds(nr_stays, time_thresh, m2m_flags=[True,True]):
 
 
 def get_xlocs(min_, max_, size, dist_thresh):
-    
+    """
+    """
     # Check that the stays aren't too close, ie within the dist thresh    
     keep_running = True
     while keep_running:
@@ -170,7 +173,7 @@ def get_rand_traj(configs):
     return time_arr, raw_arr, noise_arr, segments
 
 
-def get_trajectory(stays, time, configs):
+def get_trajectory(stays, full_t_arr configs):
     """ 
     Creates a trajectory from a set of stays.
 
@@ -195,29 +198,29 @@ def get_trajectory(stays, time, configs):
     t_segs, x_segs = get_stay_segs(stays)
 
     # Compute the segments
-    segments = get_segments(time, stays, dist_thresh)
+    segments = get_segments(full_t_arr stays, dist_thresh)
     
     # Compute the raw journey
-    raw_journey = get_journey_path(time, segments)
+    raw_journey = get_journey_path(full_t_arr segments)
 
     keep_running = True
     #n=0
     while keep_running:
         # Reduce the journey based on the event- and duplicate fractions
-        dup_mask = get_mask_with_duplicates(time, event_frac, duplicate_frac)
+        dup_mask = get_mask_with_duplicates(full_t_arr event_frac, duplicate_frac)
 
-        dup_mask = get_adjusted_dup_mask(time, stays, dup_mask)
+        dup_mask = get_adjusted_dup_mask(full_t_arr stays, dup_mask)
         
-        time_sub = time[dup_mask]
-        raw_journey_sub = raw_journey[dup_mask]
+        t_arr = time[dup_mask]
+        r_arr = raw_journey[dup_mask]
 
         # Using the new time sub-array, get the _adjusted_ stays and segments
-        stays_ = get_adjusted_stays(segments, time_sub)
+        stays_ = get_adjusted_stays(segments, t_arr)
         
         # Check whether to iterate again
         keep_running = any([abs(d['end']-d['start'])<time_thresh for d in stays_])
         #print(f"{n:3d} stays: keep_running =", keep_running)
-        segments_ = get_segments(time, stays, dist_thresh)
+        segments_ = get_segments(full_t_arr stays, dist_thresh)
         #n += 1
      
     #new_t_segs, new_x_segs = get_stay_segs(new_stays)      
@@ -226,13 +229,23 @@ def get_trajectory(stays, time, configs):
 
     noise_segments = get_noisy_segs(segments_, noises)
 
-    noise_journey_sub = get_noisy_path(time_sub, raw_journey_sub, noise_segments)
+    x_arr = get_noisy_path(t_arr, r_arr, noise_segments)
     
-    return time_sub, raw_journey_sub, noise_journey_sub, noise_segments
+    return t_arr, r_arr, x_arr, noise_segments
 
 
 def pickle_trajectory(t_arr, x_arr, nx_arr, segs, path_to_file):
+    """ 
+    Saves a trajectory as a `pickle` binary file.
     
+    :param: t_arr np.array An array of time points
+    :param: t_arr np.array An array of (raw) location points, without noise
+    :param: x_arr np.array An array of noisy locations
+    :param: segs [dict] A list of segment dicts
+    :param: path_to_file str the location for the output file
+    
+    :return: None
+    """    
     import pickle
 
     trajectory = {}
@@ -242,3 +255,29 @@ def pickle_trajectory(t_arr, x_arr, nx_arr, segs, path_to_file):
     trajectory['nse_locs_arr'] = nx_arr
     
     pickle.dump( trajectory, open( path_to_file, "wb" ) )
+
+
+def get_pickle_trajectory(path_to_file):
+    """ 
+    Reads a trajectory as a `pickle` binary file.
+    
+    :param: path_to_file str the location for the input file
+    
+    :return: np.array An array of time points
+    :return: np.array An array of (raw) location points, without noise
+    :return: np.array An array of noisy locations
+    :return: [dict] A list of segment dicts
+    """    
+    import pickle
+    
+    if path_to_file[-4:] != '.pkl':
+        path_to_file += ".pkl"
+        
+    trajectory = pickle.load( open(path_to_file, "rb") )
+
+    segments = trajectory['segments']
+    t_arr = trajectory['time_arr']
+    r_arr = trajectory['raw_locs_arr']
+    x_arr = trajectory['nse_locs_arr']
+
+    return t_arr, r_arr, x_arr, segments
