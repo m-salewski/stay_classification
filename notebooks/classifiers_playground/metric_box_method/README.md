@@ -78,7 +78,6 @@ Note that the IQR can be larger than the allow distance threshold; the box would
 
 ## ToDos
 
-
 * check that the newly split clusters are 
     * contain enough samples
     * $\checkmark$ ~~have a total duration longer than the threshold~~ see `get_extended_clusters`
