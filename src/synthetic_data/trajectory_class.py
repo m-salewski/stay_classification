@@ -173,7 +173,7 @@ def get_rand_traj(configs):
     return time_arr, raw_arr, noise_arr, segments
 
 
-def get_trajectory(stays, full_t_arr configs):
+def get_trajectory(stays, full_t_arr, configs):
     """ 
     Creates a trajectory from a set of stays.
 
@@ -198,18 +198,18 @@ def get_trajectory(stays, full_t_arr configs):
     t_segs, x_segs = get_stay_segs(stays)
 
     # Compute the segments
-    segments = get_segments(full_t_arr stays, dist_thresh)
+    segments = get_segments(full_t_arr, stays, dist_thresh)
     
     # Compute the raw journey
-    raw_journey = get_journey_path(full_t_arr segments)
+    raw_journey = get_journey_path(full_t_arr, segments)
 
     keep_running = True
     #n=0
     while keep_running:
         # Reduce the journey based on the event- and duplicate fractions
-        dup_mask = get_mask_with_duplicates(full_t_arr event_frac, duplicate_frac)
+        dup_mask = get_mask_with_duplicates(full_t_arr, event_frac, duplicate_frac)
 
-        dup_mask = get_adjusted_dup_mask(full_t_arr stays, dup_mask)
+        dup_mask = get_adjusted_dup_mask(full_t_arr, stays, dup_mask)
         
         t_arr = time[dup_mask]
         r_arr = raw_journey[dup_mask]
@@ -220,7 +220,7 @@ def get_trajectory(stays, full_t_arr configs):
         # Check whether to iterate again
         keep_running = any([abs(d['end']-d['start'])<time_thresh for d in stays_])
         #print(f"{n:3d} stays: keep_running =", keep_running)
-        segments_ = get_segments(full_t_arr stays, dist_thresh)
+        segments_ = get_segments(full_t_arr, stays, dist_thresh)
         #n += 1
      
     #new_t_segs, new_x_segs = get_stay_segs(new_stays)      
