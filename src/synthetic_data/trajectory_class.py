@@ -211,7 +211,7 @@ def get_trajectory(stays, full_t_arr, configs):
 
         dup_mask = get_adjusted_dup_mask(full_t_arr, stays, dup_mask)
         
-        t_arr = time[dup_mask]
+        t_arr = full_t_arr[dup_mask]
         r_arr = raw_journey[dup_mask]
 
         # Using the new time sub-array, get the _adjusted_ stays and segments
