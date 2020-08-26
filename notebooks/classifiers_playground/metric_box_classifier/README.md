@@ -82,35 +82,49 @@ Note that the IQR can be larger than the allow distance threshold; the box would
 
 * check that the newly split clusters are 
     * contain enough samples
-    * $\checkmark$ ~~have a total duration longer than the threshold~~ see `get_extended_clusters`
-    * $\checkmark$ ~~are not embedded within another cluster~~ possible, but unused; see ~~`separate_embedded_clusters`~~ 
-* $\checkmark$ ~~check that there are no embedded clusters~~ see ~~`separate_embedded_clusters`~~
-    * ~~times don't overlap~~ $\checkmark\to$ have function
+    * [x] ~~have a total duration longer than the threshold~~ see `get_extended_clusters`
+    * [x] ~~are not embedded within another cluster~~ possible, but unused; see ~~`separate_embedded_clusters`~~ 
+* [x] ~~check that there are no embedded clusters~~ see ~~`separate_embedded_clusters`~~
+    * ~~times don't overlap~~ have function
     * ~~if refined clusters are embedded, check if one cluster is noise~~ ignored
-* check the stddev of the refined clusters are smaller
-* check on adjacent clusters
-    * $\checkmark$ ~~check on the limits of time between adjacent clusters, esp. when they have the same mean and/or median~~ see `merge_clusters_combo`
+* [ ] check the stddev of the refined clusters are smaller
+* [ ] check on adjacent clusters
+    * [x] ~~check on the limits of time between adjacent clusters, esp. when they have the same mean and/or median~~ see `merge_clusters_combo`
         * if at $x_a$ for $t_1$ then again at $x_a$ for $t_2$, duration between going from and back to $x_a$ should reflect some mimimal amount of time ($2\times$ travel and a stay), 
             * e.g. 
                 * from $x_a$ to an unknown $x_b$ with a stay at $x_b$ of the miminum duration and then back to $x_a$ 
                 * should satisfy some criterion or _there is no inbetween travel and $t_1$ and $t_2$ are part of the same cluster_
-    * $\checkmark$ ~~check of the metrics for inter-subcluster gaps~~ see `merge_clusters_combo`
+    * [x] ~~check of the metrics for inter-subcluster gaps~~ see `merge_clusters_combo`
         * these are also clusters but unlabeled after the first round of clustering
     * **!!!** check that the identified stays during the substages are not immediately adjacent
         * _ie_ no stays should have indices like `[10, ..., 20]` followed by `[21, ..., 30]`
             * such stays are possible $\to$ but there should be a minimum travel time if the locations are distinct
-* check the gaps between (short) clusters
+* [ ] check the gaps between (short) clusters
     * look for limits for the length of a travel
-* include a measure of the placement of the stays and measure the deviation from the location of the true stay
+* [ ] include a measure of the placement of the stays and measure the deviation from the location of the true stay
     * can use a segment-based approach as in the evaluation script.
-* include a measure which splits the scoring (prec/rec/err) into the overlapping and the non-overlapping stays of a trajectory   
+* [ ] include a measure which splits the scoring (prec/rec/err) into the overlapping and the non-overlapping stays of a trajectory   
     * then score them individually,  
     * then have a measure of how much the non-overlapping parts can be ignored
         * _ie_ does the classification get all the stays distinctly and mostly correctly classified?
-* for the extend-box portion, 
+* [ ] Update the box method extension: for the extend-box portion, 
     * start with the biggest boxes and extend these first
     * then, see if they absorb smaller boxes, and exclude these from further extensions.
  
+* Repo TODOs
+    * [ ] clean up `classifier_1D__metric_box_classifier__3stays_illustrate.ipynb`
+    * add notes to `classifier_1D__metric_box_classifier__stays_illustrate_batch_plots.ipynb`
+    * [ ] change headings and add notes to `classifier_1D__metric_box_classifier__3stays_illustrate_batch.ipynb`
+    * [ ] update NBs in metric_box_classifier dir to go to the synthetic_data dir as needed
+        * keep the classifier demo here, though
+    * [ ] check over _all_ READMEs to ensure that correct summaries are given and up-to-date
+    * [ ] mv the README_canonical in metric_box_classifier to a subsection of the synthetic_data README
+    * [ ] clean up the box_method dir to only contain the minimal working illustration
+    * [ ] clean up dirs to only contain the minimal working illustration:
+        * notebooks/dbscan
+        * notebooks/piecewise-linear
+        * notebooks/quick_box
+    
 ## Notes: 
 
 * **Gaps** 
@@ -137,8 +151,8 @@ Note that the IQR can be larger than the allow distance threshold; the box would
     * part of a travel
         * in the canonical 3-stays, these are always between larger stays
         * **Todo** 
-            * _check if these have insufficient events with the IQR-mask_
-            * _check if these have insufficient duration with the IQR-mask_            
+            * [ ] _check if these have insufficient events with the IQR-mask_
+            * [ ] _check if these have insufficient duration with the IQR-mask_            
     * seems to be short in duration
 * overlapping clusters
     * embedded and also identitcal clusters
