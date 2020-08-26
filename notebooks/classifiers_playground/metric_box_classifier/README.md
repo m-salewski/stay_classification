@@ -1,5 +1,7 @@
 # Stay classification: clustering with box-refinement
 
+As of **26.08.2020**
+
 ## Algorithm
 
 1. `get_clusters_3`
@@ -99,6 +101,15 @@ Note that the IQR can be larger than the allow distance threshold; the box would
             * such stays are possible $\to$ but there should be a minimum travel time if the locations are distinct
 * check the gaps between (short) clusters
     * look for limits for the length of a travel
+* include a measure of the placement of the stays and measure the deviation from the location of the true stay
+    * can use a segment-based approach as in the evaluation script.
+* include a measure which splits the scoring (prec/rec/err) into the overlapping and the non-overlapping stays of a trajectory   
+    * then score them individually,  
+    * then have a measure of how much the non-overlapping parts can be ignored
+        * _ie_ does the classification get all the stays distinctly and mostly correctly classified?
+* for the extend-box portion, 
+    * start with the biggest boxes and extend these first
+    * then, see if they absorb smaller boxes, and exclude these from further extensions.
  
 ## Notes: 
 
