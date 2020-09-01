@@ -36,7 +36,8 @@ def get_pred_labels(clusters, shape):
 
 
 def eval_synth_data(t_arr, segments, clusters):
-
+    """
+    """
     # Get the actual stay indices and create the labels for each event
     true_indices = get_stay_indices(get_adjusted_stays(segments, t_arr), t_arr)
     true_labels = np.zeros(t_arr.shape)
@@ -163,19 +164,69 @@ def get_segments_scores(t_arr, segments, pred_clusters, verbose=False):
         
         true_clusters.append(list(get_stay_indices(get_adjusted_stays(segments[n:n+1], t_arr), t_arr)[0] ))
     
-    precs, recs = get_segments_scores_core(t_arr, true_clusters, pred_clusters, verbose)
+    if verbose: print()
+    pred_scores = np.array(get_segments_scores_core(t_arr, true_clusters, pred_clusters, True, verbose))
     
-    return precs, recs
+    if verbose: print()
+    true_scores = get_segments_scores_core(t_arr, pred_clusters, true_clusters, False, verbose)
+    true_scores = np.array(true_scores[3:]+true_scores[:3])
+    
+    result =  0.5*(pred_scores+true_scores)
+
+    spacers = 4
+    if verbose: 
+        print(f"\nOverall stats: \n{spacers*' '}min. prec.: {result[0]:6.3f};"\
+              f"{spacers*' '}min. rec.: {result[3]:6.3f}")
+        print(f"{spacers*' '}avg. prec.: {result[1]:6.3f};"\
+              f"{spacers*' '}avg. rec.: {result[4]:6.3f}")
+        print(f"{(spacers-2)*' '}w-avg. prec.: {result[2]:6.3f};"\
+              f"{(spacers-2)*' '}w-avg. rec.: {result[5]:6.3f}")
+    
+
+    true_labels = get_labels_from_clusters(true_clusters, t_arr.shape)
+    pred_labels = get_labels_from_clusters(pred_clusters, t_arr.shape)
+                        
+    prec = precision_score(true_labels, pred_labels)
+    rec  = recall_score(true_labels, pred_labels)           
+    
+    if verbose: print(f"\n{(spacers)*' '}tot. prec.: {prec:6.3f};{(spacers)*' '}tot. rec.: {rec:6.3f}")    
+
+    # Get some measures of the nDurations
+    # TODO: move this elsewhere --> new function?
+    total_duration = get_duration(0,-1)
+    true_durations = 0
+    for true_clust in true_clusters:
+        true_durations += get_duration(true_clust[0],true_clust[-1])
+        
+    pred_durations = 0
+    for pred_clust in pred_clusters:
+        pred_durations += get_duration(pred_clust[0],pred_clust[-1])
+ 
+    if verbose: print(f"\nDurations:",\
+                      f"\n\ttot. trajectory duration: {total_duration:6.3f}",\
+                      f"\n\ttot. true stays duration: {true_durations:6.3f}",\
+                      f"({true_durations/total_duration:5.3f})",\
+                      f"\n\ttot. pred stays duration: {pred_durations:6.3f}",\
+                      f"({pred_durations/total_duration:5.3f})")
+    
+    return result
 
 
-def get_segments_scores_core(t_arr, true_clusters, pred_clusters, verbose=False):
+def get_segments_scores_core(t_arr, true_clusters, pred_clusters, true_to_pred=True, verbose=False):
     """
     Evaluate the individual segments from a predicted classification
     """
     
     get_duration = lambda ind1, ind2: abs(t_arr[ind2]-t_arr[ind1])
     
-    if verbose: print(f"Predicted {len(pred_clusters)} of {len(true_clusters)} true clusters\n")
+    if true_to_pred:
+        pred_flag = 'pred'
+        true_flag = 'true'
+    else:
+        pred_flag = 'true'
+        true_flag = 'pred'
+        
+    if verbose: print(f"Comparing {len(pred_clusters)} {pred_flag} to {len(true_clusters)} {true_flag} clusters\n")
 
     total_duration = get_duration(0,-1)
     true_durations = 0
@@ -192,6 +243,8 @@ def get_segments_scores_core(t_arr, true_clusters, pred_clusters, verbose=False)
     w_precs = []
     w_recs = []
     
+    # Collect the overlapped true cluster indices
+    all_overlapping_pred_clusters = []
     
     # Loop through the pred. clusters, determine which true clusters they belong to and measure their p/rec scores    
     for nn, pred_clust in enumerate(pred_clusters):
@@ -238,6 +291,7 @@ def get_segments_scores_core(t_arr, true_clusters, pred_clusters, verbose=False)
         nr_overlaps = len(precs_)
         #print(len(overlapping_pred_clusters), len(precs), len(recs), nr_overlaps)
         if len(overlapping_pred_clusters) > 0:
+            all_overlapping_pred_clusters.extend(overlapping_pred_clusters)
             if verbose: print(f"\n\toverlaps with {len(overlapping_pred_clusters)} true cluster(s):")                
             for mm, m in enumerate(overlapping_pred_clusters):
                 #mm = -1*nr_overlaps + mm
@@ -271,37 +325,42 @@ def get_segments_scores_core(t_arr, true_clusters, pred_clusters, verbose=False)
         else:
             precs.append(0.)
             recs.append(0.)
-
+            
             w_precs.append(0.0)
             w_recs.append(0.0)
         
         if verbose: print()
 
+    # Get the missed true clusters
+    missing_true_clusters = list(set(range(len(true_clusters)))\
+                     .difference(set(all_overlapping_pred_clusters)))
+    if len(missing_true_clusters) > 0:
+        if verbose: print('Missing true clusters:', missing_true_clusters, '\n')
+        # This doesn't make sense to add to the average
+        #precs.append(0.)
+        #recs.append(0.)
+        
+        # This won't show up since the weights aren't accounted for
+        #w_precs.append(0.0)
+        #w_recs.append(0.0) 
+    
     spacers = 4 
-    if verbose: print(f"Stats: \n{spacers*' '}min. prec.: {min(precs):6.3f};{spacers*' '}min. rec.: {min(recs):6.3f}")
-    if verbose: print(f"{spacers*' '}avg. prec.: {sum(precs)/len(precs):6.3f};{spacers*' '}avg. rec.: {sum(recs)/len(recs):6.3f}")
-    if verbose: print(f"{(spacers-2)*' '}w-avg. prec.: {sum(w_precs):6.3f};{(spacers-2)*' '}w-avg. rec.: {sum(w_recs):6.3f}")
+    if verbose: 
+        print(f"Partial stats: \n{spacers*' '}min. prec.: {min(precs):6.3f};{spacers*' '}min. rec.: {min(recs):6.3f}")
+        print(f"{spacers*' '}avg. prec.: {sum(precs)/len(precs):6.3f};{spacers*' '}avg. rec.: {sum(recs)/len(recs):6.3f}")
+        print(f"{(spacers-2)*' '}w-avg. prec.: {sum(w_precs):6.3f};{(spacers-2)*' '}w-avg. rec.: {sum(w_recs):6.3f}")
     
-    true_labels = np.zeros(t_arr.shape)
-    for n, true_clust in enumerate(true_clusters):    
-        true_labels[true_clust[0]:true_clust[1]+1] = 1
-        
-    pred_labels = np.zeros(t_arr.shape)
-    for nn, pred_clust in enumerate(pred_clusters):
-        pred_labels[pred_clust[0]:pred_clust[-1]+1] = 1
-                        
-    prec = precision_score(true_labels, pred_labels)
-    rec  = recall_score(true_labels, pred_labels)           
-    if verbose: print(f"{(spacers)*' '}tot. prec.: {prec:6.3f};{(spacers)*' '}tot. rec.: {rec:6.3f}")    
-        
-    if verbose: print(f"\nDurations:",\
-                      f"\ntot. trajectory duration: {total_duration:6.3f}",\
-                      f"\ntot. true stays duration: {true_durations:6.3f}",\
-                      f"({true_durations/total_duration:5.3f})",\
-                      f"\ntot. pred stays duration: {pred_durations:6.3f}",\
-                      f"({pred_durations/total_duration:5.3f})")
+    min_prec = min(precs)
+    min_rec = min(recs)
+    avg_prec = sum(precs)/len(precs)
+    avg_rec = sum(recs)/len(recs)
+    wavg_prec = sum(w_precs)
+    wavg_rec = sum(w_recs)
     
-    return precs, recs
+    return min_prec, avg_prec, wavg_prec, min_rec, avg_rec, wavg_rec
+
+
+get_err = lambda trues, preds: np.sum(abs(trues-preds))/trues.size
 
 
 def get_segments_errs(t_arr, segments, pred_clusters, verbose=False):
@@ -317,20 +376,63 @@ def get_segments_errs(t_arr, segments, pred_clusters, verbose=False):
         
         true_clusters.append(list(get_stay_indices(get_adjusted_stays(segments[n:n+1], t_arr), t_arr)[0] ))
     
-    errs = get_segments_errs_core(t_arr, true_clusters, pred_clusters, verbose)
+    if verbose: print()
+    pred_errs = np.array(get_segments_errs_core(t_arr, true_clusters, pred_clusters, True, verbose))
     
-    return errs
+    if verbose: print()
+    true_errs = np.array(get_segments_errs_core(t_arr, pred_clusters, true_clusters, False, verbose))
+    
+    result = 0.5*(pred_errs+true_errs)
+    
+    spacers = 4    
+    if verbose: 
+        print(f"\nTotal Stats: \n{spacers*' '}max. err.: {result[0]:6.3f}")
+        print(f"{spacers*' '}avg. err.: {result[1]:6.3f}")
+        print(f"{(spacers-2)*' '}w-avg. err.: {result[2]:6.3f}")
+     
+    # Some additional measures of the error
+    # NOTE: when there are no true stays shared among multiplt pred stays,
+    # then the total err == N_{pred.stays}*(avg. err.)
+    true_labels = get_labels_from_clusters(true_clusters, t_arr.shape)
+    pred_labels = get_labels_from_clusters(pred_clusters, t_arr.shape)
+    err  = get_err(true_labels, pred_labels)
+    
+    if verbose: print(f"\n{(spacers)*' '}tot. err.: {err:6.3f}")         
+    
+    total_duration = get_duration(0,-1)
+    true_durations = 0
+    for true_clust in true_clusters:
+        true_durations += get_duration(true_clust[0],true_clust[-1])
+        
+    pred_durations = 0
+    for pred_clust in pred_clusters:
+        pred_durations += get_duration(pred_clust[0],pred_clust[-1])
+        
+    if verbose: print(f"\nDurations:",\
+                      f"\n\ttot. trajectory duration: {total_duration:6.3f}",\
+                      f"\n\ttot. true stays duration: {true_durations:6.3f}",\
+                      f"({true_durations/total_duration:5.3f})",\
+                      f"\n\ttot. pred stays duration: {pred_durations:6.3f}",\
+                      f"({pred_durations/total_duration:5.3f})")
+    
+    return result
 
 
-def get_segments_errs_core(t_arr, true_clusters, pred_clusters, verbose=False):
+def get_segments_errs_core(t_arr, true_clusters, pred_clusters, true_to_pred=True, verbose=False):
     """
     Evaluate the individual segments from a predicted classification
     """
-    get_err = lambda trues, preds: np.sum(abs(trues-preds))/trues.size
     
     get_duration = lambda ind1, ind2: abs(t_arr[ind2]-t_arr[ind1])
     
-    if verbose: print(f"Predicted {len(pred_clusters)} of {len(true_clusters)} true clusters\n")
+    if true_to_pred:
+        pred_flag = 'pred'
+        true_flag = 'true'
+    else:
+        pred_flag = 'true'
+        true_flag = 'pred'
+        
+    if verbose: print(f"Comparing {len(pred_clusters)} {pred_flag} to {len(true_clusters)} {true_flag} clusters\n")
 
     total_duration = get_duration(0,-1)
     true_durations = 0
@@ -434,17 +536,12 @@ def get_segments_errs_core(t_arr, true_clusters, pred_clusters, verbose=False):
         print(f"Stats: \n{spacers*' '}max. err.: {max(errs):6.3f}")
         print(f"{spacers*' '}avg. err.: {sum(errs)/len(errs):6.3f}")
         print(f"{(spacers-2)*' '}w-avg. err.: {sum(w_errs):6.3f}")
-    
-    # Some additional measures of the error
-    # NOTE: when there are no true stays shared among multiplt pred stays,
-    # then the total err == N_{pred.stays}*(avg. err.)
-    true_labels = get_labels_from_clusters(true_clusters, t_arr.shape)
-    pred_labels = get_labels_from_clusters(pred_clusters, t_arr.shape)
-    err  = get_err(true_labels, pred_labels)
-    
-    if verbose: print(f"{(spacers)*' '}tot. err.: {err:6.3f}")
-    
-    return errs
+
+    min_err = max(errs)
+    avg_err = sum(errs)/len(errs)
+    wavg_err = sum(w_errs)
+
+    return min_err, avg_err, wavg_err
 
 
 subcluster_lengths = lambda cluster_list: [len(c) for c in cluster_list]
@@ -455,3 +552,8 @@ def print_p_and_r(clusters, prec, rec, conmat):
     print(f"\tprec.:{prec:6.3f}")
     print(f"\t rec.:{ rec:6.3f}")
     print(conmat)
+
+
+
+
+    _, a_err, w_err = get_segments_errs(t_arr, segments, clusters)   

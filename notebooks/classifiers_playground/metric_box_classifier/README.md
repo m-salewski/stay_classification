@@ -80,6 +80,9 @@ Note that the IQR can be larger than the allow distance threshold; the box would
 
 ## ToDos
 
+### Clustering
+
+#### All methods
 * check that the newly split clusters are 
     * contain enough samples
     * [x] ~~have a total duration longer than the threshold~~ see `get_extended_clusters`
@@ -101,29 +104,43 @@ Note that the IQR can be larger than the allow distance threshold; the box would
             * such stays are possible $\to$ but there should be a minimum travel time if the locations are distinct
 * [ ] check the gaps between (short) clusters
     * look for limits for the length of a travel
+
+#### Box-method
+* [ ] Update the box method extension: for the extend-box portion, 
+    * start with the biggest boxes and extend these first
+    * then, see if they absorb smaller boxes, and exclude these from further extensions.
+ 
+### Repo
+
+* [ ] clean up `classifier_1D__metric_box_classifier__3stays_illustrate.ipynb`
+* add notes to `classifier_1D__metric_box_classifier__stays_illustrate_batch_plots.ipynb`
+* [ ] change headings and add notes to `classifier_1D__metric_box_classifier__3stays_illustrate_batch.ipynb`
+* [ ] update NBs in metric_box_classifier dir to go to the synthetic_data dir as needed
+    * keep the classifier demo here, though
+* [ ] check over _all_ READMEs to ensure that correct summaries are given and up-to-date
+* [ ] mv the README_canonical in metric_box_classifier to a subsection of the synthetic_data README
+* [ ] clean up the box_method dir to only contain the minimal working illustration
+* [ ] clean up dirs to only contain the minimal working illustration:
+    * notebooks/dbscan
+    * notebooks/piecewise-linear
+    * notebooks/quick_box
+
+### Evaluation
+
 * [ ] include a measure of the placement of the stays and measure the deviation from the location of the true stay
     * can use a segment-based approach as in the evaluation script.
 * [ ] include a measure which splits the scoring (prec/rec/err) into the overlapping and the non-overlapping stays of a trajectory   
     * then score them individually,  
     * then have a measure of how much the non-overlapping parts can be ignored
         * _ie_ does the classification get all the stays distinctly and mostly correctly classified?
-* [ ] Update the box method extension: for the extend-box portion, 
-    * start with the biggest boxes and extend these first
-    * then, see if they absorb smaller boxes, and exclude these from further extensions.
- 
-* Repo TODOs
-    * [ ] clean up `classifier_1D__metric_box_classifier__3stays_illustrate.ipynb`
-    * add notes to `classifier_1D__metric_box_classifier__stays_illustrate_batch_plots.ipynb`
-    * [ ] change headings and add notes to `classifier_1D__metric_box_classifier__3stays_illustrate_batch.ipynb`
-    * [ ] update NBs in metric_box_classifier dir to go to the synthetic_data dir as needed
-        * keep the classifier demo here, though
-    * [ ] check over _all_ READMEs to ensure that correct summaries are given and up-to-date
-    * [ ] mv the README_canonical in metric_box_classifier to a subsection of the synthetic_data README
-    * [ ] clean up the box_method dir to only contain the minimal working illustration
-    * [ ] clean up dirs to only contain the minimal working illustration:
-        * notebooks/dbscan
-        * notebooks/piecewise-linear
-        * notebooks/quick_box
+* [ ] when there is no cluster to match a true stay, include the missing stay into the p/rec scores and error.
+    * **Solution** make the evaluation as normal and then again swapping the true and pred clusters; then average the results
+        * one way will get the false positive stays but ignoring the false travels (false neg. stays)
+        * the other will get the false travels (false neg. stays) but ignore the false pos. stays
+        * **Note** the problem with this is that it balances the pred and recs:
+            * _ie_ the low precs in one become the low recs in the other
+            * [x] **solution** swap the prec and rec from the second scoring.
+    
     
 ## Notes: 
 
