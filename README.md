@@ -241,31 +241,76 @@ While the same can also be done for travels and in effect all segments of a traj
 here only the stays are measured since it is a binary classification.
 
 A [notebook](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb)
-explaining and illustrating the metrics.
+(on [github](https://github.com/m-salewski/stay_classification/blob/master/notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb)) explaining and illustrating the metrics.
 
-### Classifiers
+### Classifier evaluation
+
+The classifiers are evaluated on two sets of synthetic data, each containing 1000 samples.  
+The first set contatins random trajectories with 3 stays and the second contains a random trajectories with random numbers of stays (these were chosen from a poisson distribution where roughly 20% of the samples had 3 stays).
+
+The following are the dataset averages (the 1000 trajectories and subsets thereof) of the time-weighted segment scores for the  precision and recall. See the metrics notebook above for the details.
 
 #### Quick Box Classifier
 
 This is a growing-type classifier.
 
-* [3-stays (link to NB)](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb)  
-* [arbitrary stays (link to NB)](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb)
+* 3 stays (links to NB: [local](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb), [github](https://github.com/m-salewski/stay_classification/blob/master/notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb))
+    * correct number of stays,  0.794  
+        * prec.:  0.972 
+        *  rec.:  0.986 
+    * incorrect number of stays,  0.206 
+        * prec.:  0.926 
+        *  rec.:  0.937
+
+* arbitrary stays (links to NB: [local](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb), [github](https://github.com/m-salewski/stay_classification/blob/master/notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb))
+    * correct number of stays,  0.665  
+        * prec.:  0.993 
+        *  rec.:  0.993 
+    * incorrect number of stays,  0.335 
+        * prec.:  0.98 
+        *  rec.:  0.466
 
 #### Metric Box Classifier
 
 This is a growing-type classifier.
 
-* [3-stays (link to NB)](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb)  
-* [arbitrary stays (link to NB)](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb)
+* 3 stays (links to NB: [local](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb), [github](https://github.com/m-salewski/stay_classification/blob/master/notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb))
+    * correct number of stays, 0.796  
+        * prec.: 0.956 
+        *  rec.: 0.994 
+    * incorrect number of stays, 0.204 
+        * prec.: 0.856 
+        *  rec.: 0.950
+
+* arbitrary stays (links to NB: [local](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb), [github](https://github.com/m-salewski/stay_classification/blob/master/notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb))
+    * correct number of stays, 0.933  
+        * prec.: 0.986 
+        *  rec.: 0.997 
+    * incorrect number of stays, 0.067 
+        * prec.: 0.888 
+        *  rec.: 0.956
 
 #### Bounding Box Classifier
 
 This is a cutting-type classifier.
-* [3-stays (link to NB)](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb)  
-* [arbitrary stays (link to NB)](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb)
 
+* 3 stays (links to NB: [local](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb), [github](https://github.com/m-salewski/stay_classification/blob/master/notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__3stays_illustrate_metrics.ipynb))  
+    * correct number of stays, 0.932  
+        * prec.: 0.981 
+        *  rec.: 0.999 
+    * incorrect number of stays, 0.068 
+        * prec.: 0.674 
+        *  rec.: 0.975
 
+* arbitrary stays (links to NB: [local](file://notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb), [github](https://github.com/m-salewski/stay_classification/blob/master/notebooks/classifiers_playground/metric_box_classifier/classifier_1D__metric_box_classifier__gen_stays_illustrate_metrics.ipynb))
+    * correct number of stays, 0.965    
+        * prec.: 0.994 
+        *  rec.: 0.998
+    * incorrect number of stays, 0.035 
+        * prec.: 0.866 
+        *  rec.: 0.976
+
+            
 ## Issues (algorithmic)
 
 All stay classifier methods are highly depenedent upon 
